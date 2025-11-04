@@ -1,331 +1,364 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Madhubani Realty — Custom Website</title>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
-    body{background:#f9fafb;color:#1e293b;overflow-x:hidden;}
-    a{text-decoration:none;color:inherit;}
+    /* Reset + base */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family:Inter, Poppins, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      background:#f7fafc;
+      color:#0f172a;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    a{color:inherit;text-decoration:none}
+    img{display:block;max-width:100%}
 
-    /* Navbar */
-    header{
-      background:#0f172a;
-      color:#fff;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:15px 8%;
-      position:sticky;
-      top:0;
-      z-index:1000;
+    /* Header / nav */
+    .site-header{
+      position:sticky;top:0;z-index:1200;
+      background:#0b1220;color:#fff;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 6%;gap:16px;
+      box-shadow:0 6px 20px rgba(2,6,23,0.12)
+    }
+    .brand {
+      display:flex;align-items:center;gap:12px;
+    }
+    .brand img{width:42px;height:42px;border-radius:10px;background:#fff;padding:6px}
+    .brand h1{font-size:1.15rem;font-weight:800;letter-spacing:0.2px}
+    nav{display:flex;align-items:center;gap:18px}
+    nav ul{list-style:none;display:flex;gap:18px;align-items:center}
+    nav ul li a{color:#fff;font-weight:600;padding:8px 6px;border-radius:8px;display:block}
+    nav ul li a:hover{background:rgba(255,255,255,0.06)}
+
+    /* mobile menu */
+    .hamburger{display:none;flex-direction:column;gap:4px;cursor:pointer}
+    .hamburger span{width:26px;height:3px;background:#fff;border-radius:3px;display:block}
+    @media(max-width:880px){
+      nav ul{position:fixed;top:70px;right:16px;background:#0f172a;flex-direction:column;padding:14px;border-radius:10px;box-shadow:0 12px 30px rgba(2,6,23,0.28);display:none;min-width:220px}
+      nav ul.active{display:flex}
+      .hamburger{display:flex}
     }
 
-    .logo{display:flex;align-items:center;gap:10px;}
-    .logo img{width:38px;height:38px;}
-    .logo h1{font-size:1.3rem;font-weight:700;}
-
-    nav ul{list-style:none;display:flex;align-items:center;gap:25px;}
-    nav ul li a{color:white;font-weight:500;transition:.3s;}
-    nav ul li a:hover{color:#38bdf8;}
-
-    .menu-btn{
-      display:none;
-      flex-direction:column;
-      justify-content:space-between;
-      width:28px;
-      height:18px;
-      cursor:pointer;
-    }
-    .menu-btn span{background:white;height:3px;width:100%;border-radius:2px;}
-
-    @media(max-width:800px){
-      nav ul{
-        position:absolute;
-        top:70px;
-        right:0;
-        background:#1e293b;
-        flex-direction:column;
-        width:200px;
-        display:none;
-        padding:15px;
-        border-bottom-left-radius:10px;
-      }
-      nav ul.active{display:flex;}
-      .menu-btn{display:flex;}
-    }
-
-    /* Header Section (replacing hero) */
-    .intro-header{
-      background:linear-gradient(135deg,#0f172a,#1e293b);
-      color:white;
+    /* Intro header */
+    .intro{
+      background:linear-gradient(180deg,#0b1220,#0f1a2b);
+      color:#e6eefc;
+      padding:70px 6% 56px;
       text-align:center;
-      padding:90px 10% 70px;
     }
-    .intro-header h2{
-      font-size:2.4rem;
-      margin-bottom:10px;
-      font-weight:700;
-    }
-    .intro-header p{
-      font-size:1.05rem;
-      color:#cbd5e1;
-      max-width:700px;
-      margin:auto;
-    }
+    .intro h2{font-size:2.2rem;line-height:1.02;margin-bottom:12px;font-weight:800}
+    .intro p{max-width:880px;margin:0 auto;color:#cfe0ff;font-size:1rem;line-height:1.6}
 
     /* Sections */
-    section{padding:80px 10%;}
-    h2{text-align:center;color:#0f172a;font-size:2rem;margin-bottom:40px;font-weight:700;}
-    .grid{display:grid;gap:25px;}
-    .grid-3{grid-template-columns:repeat(auto-fit,minmax(300px,1fr));}
+    main{max-width:1200px;margin:0 auto;padding:36px 6%}
+    section{margin:48px 0}
+    .section-title{font-size:1.9rem;color:#0b1220;text-align:center;margin-bottom:28px;font-weight:800}
 
-    .card{background:white;border-radius:14px;overflow:hidden;box-shadow:0 8px 20px rgba(0,0,0,0.08);transition:.3s;}
-    .card:hover{transform:translateY(-6px);}
-    .card img{width:100%;height:220px;object-fit:cover;}
-    .card-content{padding:20px;text-align:center;}
-    .card-content h4{font-size:1.2rem;color:#0f172a;margin-bottom:8px;}
-    .card-content p{color:#475569;font-size:0.95rem;}
-    .btn{display:inline-block;background:#0f172a;color:white;padding:10px 22px;border-radius:50px;margin-top:12px;font-weight:600;transition:.3s;}
-    .btn:hover{background:#1e293b;}
+    /* Cards + grid */
+    .grid{display:grid;gap:20px}
+    .grid-3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+    .card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(2,6,23,0.06);transition:transform .22s}
+    .card:hover{transform:translateY(-8px)}
+    .card .media{height:220px;overflow:hidden}
+    .card .media img{width:100%;height:100%;object-fit:cover;display:block}
+    .card .body{padding:18px;text-align:center}
+    .card h4{font-size:1.08rem;color:#06283d;margin-bottom:8px;font-weight:700}
+    .meta{color:#556077;font-size:0.95rem}
+    .cta{display:inline-block;margin-top:12px;background:#06283d;color:#fff;padding:10px 18px;border-radius:999px;font-weight:700}
 
-    /* Focus Section */
-    .focus{background:#f1f5f9;text-align:center;}
-    .focus-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;}
-    .focus-card{background:white;border-radius:12px;padding:35px;box-shadow:0 8px 18px rgba(0,0,0,0.05);}
-    .focus-card img{width:60px;margin-bottom:15px;}
-    .focus-card h4{font-weight:600;}
+    /* Focus */
+    .focus-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-items:stretch}
+    .focus-card{background:#fff;padding:28px;border-radius:12px;text-align:center;box-shadow:0 8px 22px rgba(2,6,23,0.04)}
+    .focus-card img{width:56px;height:56px;margin:0 auto 12px;opacity:0.98}
+    .focus-card h4{font-size:1.05rem;color:#06283d}
 
-    /* Why Choose Us */
-    .why{background:white;}
-    .why ul{list-style:none;max-width:700px;margin:auto;}
-    .why ul li{padding:10px 0;border-bottom:1px solid #e2e8f0;font-size:1rem;color:#475569;}
-    .why ul li:last-child{border-bottom:none;}
+    /* Services simple layout */
+    .services-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+    .service-card{background:#fff;padding:22px;border-radius:12px;box-shadow:0 8px 22px rgba(2,6,23,0.04);text-align:center}
+    .service-card h4{color:#06283d;margin-bottom:8px}
 
-    /* Testimonials */
-    .testimonials{background:#f8fafc;text-align:center;position:relative;}
-    .testimonial-slider{
-      display:flex;
-      overflow-x:auto;
-      scroll-behavior:smooth;
-      gap:25px;
-      padding:20px;
-    }
-    .testimonial-slider::-webkit-scrollbar{display:none;}
-    .testimonial-card{
-      background:white;
-      flex:0 0 300px;
-      padding:25px;
-      border-radius:10px;
-      box-shadow:0 8px 20px rgba(0,0,0,0.05);
-      text-align:center;
-    }
-    .testimonial-card p{color:#475569;margin:10px 0 8px;}
-    .testimonial-card h5{color:#0f172a;font-weight:600;}
-    .arrow{
-      position:absolute;
-      top:50%;
-      transform:translateY(-50%);
-      background:#0f172a;
-      color:white;
-      border:none;
-      font-size:1.4rem;
-      padding:10px 15px;
-      border-radius:50%;
-      cursor:pointer;
-    }
-    .arrow.left{left:5%;}
-    .arrow.right{right:5%;}
+    /* Why choose us */
+    .why-list{max-width:880px;margin:0 auto;list-style:none;padding:0}
+    .why-list li{padding:12px 0;border-bottom:1px solid #eef3f8;color:#475569;font-size:1rem}
+    .why-list li:last-child{border-bottom:none}
 
-    /* Agents */
-    .agents-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px;text-align:center;}
-    .agent{background:white;padding:20px;border-radius:12px;box-shadow:0 8px 18px rgba(0,0,0,0.06);}
-    .agent img{width:110px;height:110px;object-fit:cover;border-radius:50%;margin-bottom:10px;}
+    /* Testimonials: scrollable */
+    .testimonials-wrap{position:relative;padding:18px 6%}
+    .test-slider{display:flex;gap:18px;overflow-x:auto;padding:12px 6px;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch}
+    .test-slider::-webkit-scrollbar{display:none}
+    .test-card{flex:0 0 320px;background:#fff;padding:20px;border-radius:12px;box-shadow:0 8px 20px rgba(2,6,23,0.05);scroll-snap-align:center}
+    .test-card p{color:#475569;margin-bottom:8px}
+    .test-card h5{color:#06283d;font-weight:700}
+
+    /* Agents grid */
+    .agents-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+    .agent{background:#fff;padding:18px;border-radius:12px;text-align:center;box-shadow:0 8px 20px rgba(2,6,23,0.05)}
+    .agent img{width:100px;height:100px;border-radius:50%;object-fit:cover;margin:0 auto 10px}
 
     /* About */
-    .about p{max-width:900px;margin:auto;color:#475569;font-size:1rem;line-height:1.8;}
+    .about p{max-width:900px;margin:0 auto;color:#475569;line-height:1.75}
 
     /* Footer */
-    footer{
-      background:#0f172a;
-      color:#fff;
-      text-align:center;
-      padding:30px 10%;
-      font-size:0.9rem;
-      margin-top:50px;
-    }
+    footer{background:#0b1220;color:#fff;padding:26px 6%;text-align:center;border-top-left-radius:10px;border-top-right-radius:10px;margin-top:36px}
 
-    /* WhatsApp Float */
-    .whatsapp{
-      position:fixed;
-      bottom:25px;
-      right:25px;
-      background:#25D366;
-      color:white;
-      border-radius:50%;
-      width:60px;
-      height:60px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      box-shadow:0 6px 20px rgba(0,0,0,0.3);
-      z-index:999;
+    /* WhatsApp floating button with icon */
+    .whatsapp-float{
+      position:fixed;right:18px;bottom:18px;z-index:1400;
+      width:62px;height:62px;border-radius:999px;background:#25d366;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(2,6,23,0.18)
     }
-    .whatsapp svg{width:28px;height:28px;fill:white;}
+    .whatsapp-float svg{width:30px;height:30px;fill:#fff}
+
+    /* small screens tweaks */
+    @media(max-width:700px){
+      .intro h2{font-size:1.6rem}
+      .intro p{font-size:0.98rem}
+      header .brand h1{font-size:1rem}
+    }
   </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">
-    <img src="https://cdn-icons-png.flaticon.com/512/1048/1048910.png" alt="Logo">
-    <h1>Madhubani Realty</h1>
-  </div>
-  <nav>
-    <ul>
-      <li><a href="#listings">Properties</a></li>
-      <li><a href="#focus">Our Focus</a></li>
-      <li><a href="#services">Services</a></li>
-      <li><a href="#why">Why Choose Us</a></li>
-      <li><a href="#testimonials">Testimonials</a></li>
-      <li><a href="#agents">Agents</a></li>
-      <li><a href="#about">About</a></li>
-    </ul>
-  </nav>
-  <div class="menu-btn" id="menuBtn">
-    <span></span><span></span><span></span>
-  </div>
-</header>
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="brand" aria-hidden="false">
+      <img src="https://images.unsplash.com/photo-1581284398059-6b4c6cc7b0a9?auto=format&fit=crop&w=300&q=80" alt="logo">
+      <h1>Madhubani Realty</h1>
+    </div>
 
-<!-- Intro Section -->
-<section class="intro-header">
-  <h2>Welcome to Madhubani Realty</h2>
-  <p>We bring your property business online — clean, reliable, and built to convert. From premium houses to commercial spaces, we help realtors and owners in Madhubani stand out with professional websites that actually work.</p>
-</section>
+    <nav>
+      <ul id="mainNav">
+        <li><a href="#listings" class="nav-link">Properties</a></li>
+        <li><a href="#focus" class="nav-link">Our Focus</a></li>
+        <li><a href="#services" class="nav-link">Services</a></li>
+        <li><a href="#why" class="nav-link">Why Choose Us</a></li>
+        <li><a href="#testimonials" class="nav-link">Testimonials</a></li>
+        <li><a href="#agents" class="nav-link">Agents</a></li>
+        <li><a href="#about" class="nav-link">About</a></li>
+      </ul>
+    </nav>
 
-<section id="listings">
-  <h2>Featured Properties</h2>
-  <div class="grid grid-3">
-    <div class="card">
-      <img src="https://images.unsplash.com/photo-1560185127-6ed189bf02f4?auto=format&fit=crop&w=800&q=80" alt="Luxury Villa">
-      <div class="card-content">
-        <h4>Luxury Villa</h4>
-        <p>₹85 L • 4 BHK • 2800 sq ft • Madhubani</p>
-        <a href="https://wa.me/8102253186" class="btn">Contact Now</a>
+    <div class="hamburger" id="hamburger" aria-label="Toggle menu" role="button" tabindex="0">
+      <span></span><span></span><span></span>
+    </div>
+  </header>
+
+  <!-- Intro header (clean) -->
+  <section class="intro" id="home" aria-labelledby="introTitle">
+    <div style="max-width:1100px;margin:0 auto">
+      <h2 id="introTitle">Welcome to Madhubani Realty</h2>
+      <p>We bring local property businesses online with clean, fast, custom-coded websites that actually get results. List your homes, show photos, and get direct WhatsApp leads — no tech stress for you.</p>
+    </div>
+  </section>
+
+  <main>
+    <!-- Featured Properties -->
+    <section id="listings" aria-labelledby="propTitle">
+      <h2 id="propTitle" class="section-title">Featured Properties</h2>
+      <div class="grid grid-3">
+        <article class="card" role="article">
+          <div class="media"><img src="https://images.unsplash.com/photo-1560448070-8b87f3eacea9?auto=format&fit=crop&w=1400&q=80" alt="Luxury Villa"></div>
+          <div class="body card-body">
+            <h4>Luxury Villa — Station Road</h4>
+            <div class="meta">₹85 L • 4 BHK • 2800 sq ft • Station Road</div>
+            <a class="cta" href="https://wa.me/8102253186" target="_blank">Contact Now</a>
+          </div>
+        </article>
+
+        <article class="card" role="article">
+          <div class="media"><img src="https://images.unsplash.com/photo-1595526116314-637fef7ca2b2?auto=format&fit=crop&w=1400&q=80" alt="Modern Apartment"></div>
+          <div class="body card-body">
+            <h4>Modern Apartment — Town Area</h4>
+            <div class="meta">₹55 L • 3 BHK • 1800 sq ft</div>
+            <a class="cta" href="https://wa.me/8102253186" target="_blank">Contact Now</a>
+          </div>
+        </article>
+
+        <article class="card" role="article">
+          <div class="media"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80" alt="Cozy Home"></div>
+          <div class="body card-body">
+            <h4>Cozy Family Home — Bela Road</h4>
+            <div class="meta">₹35 L • 2 BHK • 1200 sq ft</div>
+            <a class="cta" href="https://wa.me/8102253186" target="_blank">Contact Now</a>
+          </div>
+        </article>
       </div>
-    </div>
-    <div class="card">
-      <img src="https://images.unsplash.com/photo-1595526116314-637fef7ca2b2?auto=format&fit=crop&w=800&q=80" alt="Modern Apartment">
-      <div class="card-content">
-        <h4>Modern Apartment</h4>
-        <p>₹55 L • 3 BHK • 1800 sq ft • Town Area</p>
-        <a href="https://wa.me/8102253186" class="btn">Contact Now</a>
+    </section>
+
+    <!-- Our Main Focus -->
+    <section id="focus" aria-labelledby="focusTitle">
+      <h2 id="focusTitle" class="section-title">Our Main Focus</h2>
+      <div class="focus-grid">
+        <div class="focus-card">
+          <img src="https://cdn-icons-png.flaticon.com/512/992/992700.png" alt="Customer Satisfaction">
+          <h4>Customer Satisfaction</h4>
+        </div>
+        <div class="focus-card">
+          <img src="https://cdn-icons-png.flaticon.com/512/1048/1048953.png" alt="Quality Infrastructure">
+          <h4>Quality Infrastructure</h4>
+        </div>
+        <div class="focus-card">
+          <img src="https://cdn-icons-png.flaticon.com/512/1170/1170576.png" alt="On Time Delivery">
+          <h4>On Time Delivery</h4>
+        </div>
       </div>
-    </div>
-    <div class="card">
-      <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80" alt="Cozy Family Home">
-      <div class="card-content">
-        <h4>Cozy Family Home</h4>
-        <p>₹35 L • 2 BHK • 1200 sq ft • Bela Road</p>
-        <a href="https://wa.me/8102253186" class="btn">Contact Now</a>
+    </section>
+
+    <!-- Services -->
+    <section id="services" aria-labelledby="servicesTitle">
+      <h2 id="servicesTitle" class="section-title">Our Services</h2>
+      <div class="services-grid">
+        <div class="service-card">
+          <h4>Property Buying</h4>
+          <p>We help buyers find right-fit properties and guide through paperwork and fair pricing.</p>
+        </div>
+        <div class="service-card">
+          <h4>Property Selling</h4>
+          <p>Professional listing, photography, and buyer outreach to sell faster at the best price.</p>
+        </div>
+        <div class="service-card">
+          <h4>Rent & Leasing</h4>
+          <p>Tenant verification, lease agreements, and rent management for hassle-free renting.</p>
+        </div>
       </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<section id="focus" class="focus">
-  <h2>Our Main Focus</h2>
-  <div class="focus-grid">
-    <div class="focus-card">
-      <img src="https://cdn-icons-png.flaticon.com/512/992/992700.png" alt="">
-      <h4>Customer Satisfaction</h4>
-    </div>
-    <div class="focus-card">
-      <img src="https://cdn-icons-png.flaticon.com/512/1048/1048953.png" alt="">
-      <h4>Quality Infrastructure</h4>
-    </div>
-    <div class="focus-card">
-      <img src="https://cdn-icons-png.flaticon.com/512/1170/1170576.png" alt="">
-      <h4>On Time Delivery</h4>
-    </div>
-  </div>
-</section>
+    <!-- Why choose us -->
+    <section id="why" aria-labelledby="whyTitle">
+      <h2 id="whyTitle" class="section-title">Why Choose Us</h2>
+      <ul class="why-list" role="list">
+        <li>15+ years of trusted service in Madhubani’s property market.</li>
+        <li>Local expertise — agents who know the neighborhoods and buyers.</li>
+        <li>Fast responses and direct WhatsApp communication — no middlemen.</li>
+        <li>Custom-coded websites that are fast, clean, and easy to use.</li>
+        <li>Simple pricing — one-time setup, no hidden monthly charges.</li>
+      </ul>
+    </section>
 
-<section id="services">
-  <h2>Our Services</h2>
-  <div class="grid grid-3">
-    <div class="card-content">
-      <h4>Property Buying</h4>
-      <p>Helping you find the right property with complete paperwork assistance and transparent pricing.</p>
-    </div>
-    <div class="card-content">
-      <h4>Property Selling</h4>
-      <p>Reach verified buyers fast with our network and modern presentation tools.</p>
-    </div>
-    <div class="card-content">
-      <h4>Rent & Leasing</h4>
-      <p>We manage rental listings, agreements, and client communication seamlessly.</p>
-    </div>
-  </div>
-</section>
+    <!-- Testimonials (scrollable, no arrows) -->
+    <section id="testimonials" aria-labelledby="testTitle" class="testimonials-wrap">
+      <h2 id="testTitle" class="section-title">Testimonials</h2>
+      <div class="test-slider" id="testSlider" aria-label="Testimonials">
+        <div class="test-card">
+          <p>“I listed my house and got three serious buyers within a week. They handled everything quickly.”</p>
+          <h5>— Rajesh Kumar</h5>
+        </div>
+        <div class="test-card">
+          <p>“Great service and fast delivery. Their website made my agency look professional.”</p>
+          <h5>— Anita Devi</h5>
+        </div>
+        <div class="test-card">
+          <p>“Communication was simple — WhatsApp support and no tech headaches. Highly recommend.”</p>
+          <h5>— Sandeep Yadav</h5>
+        </div>
+        <div class="test-card">
+          <p>“Delivered in 3 days. The site looks premium and customers trust it.”</p>
+          <h5>— Rakesh Sharma</h5>
+        </div>
+        <div class="test-card">
+          <p>“Professional, honest, and quick. My rental listings started getting views the same day.”</p>
+          <h5>— Neha Patel</h5>
+        </div>
+      </div>
+    </section>
 
-<section id="why" class="why">
-  <h2>Why Choose Us</h2>
-  <ul>
-    <li>15+ years of trusted service in the Madhubani property market.</li>
-    <li>Experienced agents with real local expertise.</li>
-    <li>Fast, honest, and transparent property dealings.</li>
-    <li>24/7 support on WhatsApp — no middlemen, no delays.</li>
-    <li>Custom-coded digital presence that builds credibility instantly.</li>
-  </ul>
-</section>
+    <!-- Agents -->
+    <section id="agents" aria-labelledby="agentsTitle">
+      <h2 id="agentsTitle" class="section-title">Meet Our Agents</h2>
+      <div class="agents-grid">
+        <div class="agent">
+          <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80" alt="Ravi Kumar">
+          <h4>Ravi Kumar</h4>
+          <p style="color:#556077">Property Expert — 10 years experience</p>
+          <a class="cta" href="https://wa.me/8102253186" target="_blank">Contact Now</a>
+        </div>
 
-<section id="testimonials" class="testimonials">
-  <h2>Testimonials</h2>
-  <button class="arrow left" onclick="scrollTestimonials(-1)">‹</button>
-  <button class="arrow right" onclick="scrollTestimonials(1)">›</button>
-  <div class="testimonial-slider" id="testimonialSlider">
-    <div class="testimonial-card"><p>“I got my house listed and sold in just 2 weeks — their team handled everything professionally.”</p><h5>— Rajesh Kumar</h5></div>
-    <div class="testimonial-card"><p>“Reliable and easy to communicate with. Loved their design and service.”</p><h5>— Anita Devi</h5></div>
-    <div class="testimonial-card"><p>“My agency’s online presence finally looks premium. Worth every penny.”</p><h5>— Sandeep Yadav</h5></div>
-    <div class="testimonial-card"><p>“These guys built my real estate website in 3 days. Totally smooth experience.”</p><h5>— Rakesh Sharma</h5></div>
-    <div class="testimonial-card"><p>“Professional support and great attention to detail. Highly recommended.”</p><h5>— Neha Patel</h5></div>
-  </div>
-</section>
+        <div class="agent">
+          <img src="https://images.unsplash.com/photo-1545996124-1b8a6b38b5f6?auto=format&fit=crop&w=400&q=80" alt="Priya Singh">
+          <h4>Priya Singh</h4>
+          <p style="color:#556077">Commercial & Residential Specialist</p>
+          <a class="cta" href="https://wa.me/8102253186" target="_blank">Contact Now</a>
+        </div>
 
-<section id="agents">
-  <h2>Meet Our Agents</h2>
-  <div class="agents-grid">
-    <div class="agent">
-      <img src="https://images.unsplash.com/photo-1573497161648-0f55fa9d0aa3?auto=format&fit=crop&w=600&q=60" alt="">
-      <h4>Ravi Kumar</h4>
-      <p>Property Expert — 10 years experience</p>
-      <a href="https://wa.me/8102253186" class="btn">Contact Now</a>
-    </div>
-    <div class="agent">
-      <img src="https://images.unsplash.com/photo-1589571894960-20bbe2828b1d?auto=format&fit=crop&w=600&q=60" alt="">
-      <h4>Priya Singh</h4>
-      <p>Commercial & Residential Specialist</p>
-      <a href="https://wa.me/8102253186" class="btn">Contact Now</a>
-    </div>
-    <div class="agent">
-      <img src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=600&q=60" alt="">
-      <h4>Arun Patel</h4>
-      <p>Luxury Property Consultant</p>
-      <a href="https://wa.me/8102253186" class="btn">Contact Now</a>
-    </div>
-  </div>
-</section>
+        <div class="agent">
+          <img src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=400&q=80" alt="Arun Patel">
+          <h4>Arun Patel</h4>
+          <p style="color:#556077">Luxury Property Consultant</p>
+          <a class="cta" href="https://wa.me/8102253186" target="_blank">Contact Now</a>
+        </div>
+      </div>
+    </section>
 
-<section id="about" class="about">
-  <h2>About Us</h2>
-  <p>Madhubani Realty is built on trust, transparency, and modern design. For over a decade, we’ve helped local homeowners and businesses buy, sell, and rent properties without confusion or hidden costs. Our mission is to simplify real estate through technology, giving every agency the tools to go digital with style and confidence. Whether you're a first-time buyer or a property developer, our team ensures a seamless experience from start to finish.</p>
-</section>
+    <!-- About -->
+    <section id="about" aria-labelledby="aboutTitle">
+      <h2 id="aboutTitle" class="section-title">About Us</h2>
+      <p class="about">
+        Madhubani Realty is built on trust, transparency and local expertise. For over a decade we’ve guided homeowners, investors and businesses through buying, selling and renting with honesty and speed.
+        Our team knows Madhubani — the neighborhoods, the buyers, the paperwork — and we combine that knowledge with modern presentation and direct WhatsApp support so your property gets seen and sold.
+        If you want clarity, fast responses and a clean, professional online presence, we’ve got your back. We keep the tech simple — so you can focus on closing deals.
+      </p>
+    </section>
+  </main>
 
-<footer>
-  © 2025 Madhubani Realty. Custom-coded by You. All rights reserved.
-</footer>
+  <footer>
+    © 2025 Madhubani Realty · Custom-coded demo. All rights reserved.
+  </footer>
 
-<a href="https://wa.me/8102253186" class="whatsapp" target="_blank">
-  <svg viewBox="0 0 32 32"><path d="M16.04 2C8.54 2 2.5 8.04 2.5 15.54c0 2.73.72 5.33 2.1 7.64L2 30l7.02-2.18c2.19 1.2 4.68 1.83 7.02 1.83 7.5 0 13.54-6.04 13.54-13.54S23.54 2 16.04 2zm6.93 16.04c-.37-.18-2.18-1.08-2.52-1.2-.34-.13-.59-.18-.84.18s-.96 1.2-1.18 1.44-.44.27-.81.09c-.37-.18-1.56-.58-2.97-1.86-1.1-.98-1.84-2.18-2.06-2.55-.22-.37-.02-.57.16-.75.16-.16.37-.44.56-.66.18-.22.25-.37.37-.62.12-.25.06-.46-.03-.65-.09-.18-.84-2.01-1.15-2.76-.3-.72-.61-.63-.84-.64h-.72c-.25 0-.65.09-.99.46s-1.3 1.27-1.3 3.1C8.06 18.6 10.68 21 13 22.2c2.85 1.42 4.9 1.4 5.35 1.38.75-.04 2
+  <!-- WhatsApp floating button (icon + link) -->
+  <a class="whatsapp-float" href="https://wa.me/8102253186" target="_blank" aria-label="Chat on WhatsApp">
+    <!-- WhatsApp SVG icon -->
+    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M16.04 2C8.54 2 2.5 8.04 2.5 15.54c0 2.73.72 5.33 2.1 7.64L2 30l7.02-2.18c2.19 1.2 4.68 1.83 7.02 1.83 7.5 0 13.54-6.04 13.54-13.54S23.54 2 16.04 2zm6.93 16.04c-.37-.18-2.18-1.08-2.52-1.2-.34-.13-.59-.18-.84.18s-.96 1.2-1.18 1.44-.44.27-.81.09c-.37-.18-1.56-.58-2.97-1.86-1.1-.98-1.84-2.18-2.06-2.55-.22-.37-.02-.57.16-.75.16-.16.37-.44.56-.66.18-.22.25-.37.37-.62.12-.25.06-.46-.03-.65-.09-.18-.84-2.01-1.15-2.76-.3-.72-.61-.63-.84-.64h-.72c-.25 0-.65.09-.99.46s-1.3 1.27-1.3 3.1C8.06 18.6 10.68 21 13 22.2c2.85 1.42 4.9 1.4 5.35 1.38.75-.04 2.18-.71 2.49-1.57.31-.86.31-1.6.22-1.75-.09-.15-.34-.25-.72-.42z"/>
+    </svg>
+  </a>
+
+  <script>
+    // Menu toggle
+    const hamburger = document.getElementById('hamburger');
+    const mainNav = document.getElementById('mainNav');
+
+    hamburger && hamburger.addEventListener('click', () => {
+      mainNav.classList.toggle('active');
+    });
+
+    // Close nav when any link is clicked
+    document.querySelectorAll('.nav-link, nav ul li a').forEach(link => {
+      link.addEventListener('click', () => {
+        if (mainNav.classList.contains('active')) mainNav.classList.remove('active');
+      });
+    });
+
+    // Close nav on outside click (for mobile)
+    document.addEventListener('click', (e) => {
+      const isClickInside = e.target.closest('nav') || e.target.closest('.hamburger');
+      if (!isClickInside && mainNav.classList.contains('active')) {
+        mainNav.classList.remove('active');
+      }
+    });
+
+    // Make testimonial area scroll by keyboard arrows for accessibility
+    const slider = document.getElementById('testSlider');
+    if (slider) {
+      slider.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') slider.scrollBy({left: 320, behavior:'smooth'});
+        if (e.key === 'ArrowLeft') slider.scrollBy({left: -320, behavior:'smooth'});
+      });
+    }
+
+    // Small UX: make testimonials draggable with pointer (desktop)
+    (function makeDraggable() {
+      const el = document.getElementById('testSlider');
+      if (!el) return;
+      let isDown=false, startX, scrollLeft;
+      el.addEventListener('pointerdown', (e)=>{ isDown=true; el.setPointerCapture(e.pointerId); startX=e.clientX; scrollLeft=el.scrollLeft; });
+      el.addEventListener('pointerup', (e)=>{ isDown=false; el.releasePointerCapture(e.pointerId); });
+      el.addEventListener('pointermove', (e)=>{ if(!isDown) return; const x=e.clientX; const walk=(startX - x); el.scrollLeft = scrollLeft + walk; });
+    })();
+  </script>
+</body>
+</html>
