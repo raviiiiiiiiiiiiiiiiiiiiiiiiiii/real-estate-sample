@@ -42,8 +42,64 @@
     .body{padding:16px;display:flex;flex-direction:column;gap:10px}
     .body h4{font-size:1rem;color:#06283d;margin:0 0 6px;font-weight:700}
     .meta{color:#556077;font-size:0.95rem}
-    .card-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto}
-    .card-footer .cta{display:inline-block;padding:10px 14px;border-radius:999px;font-weight:700;font-size:0.92rem;text-decoration:none}
+    /* ========== PROPERTY CARD BUTTONS (NEW DESIGN) ========== */
+.card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin-top: 14px;
+}
+
+.card-footer .cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  border-radius: 48px;         /* Big pill shape */
+  min-height: 56px;            /* Nice thick buttons */
+  padding: 0 34px;
+  font-weight: 800;
+  font-size: 1.05rem;
+  line-height: 1;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.06);
+  transition: all 0.15s ease;
+}
+
+/* Left Button - Dark Navy */
+.view-btn {
+  background: #06283d;
+  color: #ffffff;
+  box-shadow: 0 8px 26px rgba(6,34,45,0.12);
+}
+
+/* Right Button - WhatsApp Green */
+.whatsapp-contact {
+  background: #25d366;
+  color: #ffffff;
+  box-shadow: 0 18px 40px rgba(37,211,102,0.12);
+}
+
+/* Hover Effects */
+.view-btn:hover { filter: brightness(0.96); }
+.whatsapp-contact:hover { filter: brightness(0.98); }
+
+/* Mobile Responsive - Stack vertically */
+@media (max-width: 640px) {
+  .card-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .card-footer .cta {
+    width: 100%;
+    padding: 12px 18px;
+    min-height: 52px;
+    font-size: 1rem;
+  }
+}
 
     /* view and whatsapp buttons */
     .view-btn{background:#06283d;color:#fff}
