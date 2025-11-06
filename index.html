@@ -45,17 +45,32 @@
       .hamburger{display:flex}
     }
 
-    /* HERO / INTRO (reduced spacing) */
-    .intro{
-      background:linear-gradient(180deg,#0b1220,#0f1a2b);
-      color:#e6eefc;
-      padding:40px 6% 28px;
-      text-align:center;
-    }
-    .intro .wrap{max-width:960px;margin:0 auto}
-    .intro h2{font-size:1.9rem;line-height:1.04;margin-bottom:10px;font-weight:800}
-    .intro p{max-width:880px;margin:0 auto;color:#cfe0ff;font-size:0.98rem;line-height:1.6}
+    /* intro header (fixed spacing + tighter look) */
+.intro{
+  background:linear-gradient(180deg,#0b1220,#0f1a2b);
+  color:#e6eefc;
+  padding:20px 6%; /* reduced top and bottom padding */
+  text-align:center;
+  margin:0; /* remove any extra gap */
+}
+.intro h2{
+  font-size:2rem;
+  line-height:1.1;
+  margin-bottom:8px;
+  font-weight:800;
+}
+.intro p{
+  max-width:880px;
+  margin:0 auto;
+  color:#cfe0ff;
+  font-size:0.98rem;
+  line-height:1.55;
+}
 
+/* remove section gaps below hero */
+main{max-width:1200px;margin:0 auto;padding:0 6% 36px}
+section{margin:0}
+#listings{margin-top:0;padding-top:0}
     /* MAIN LAYOUT */
     main{max-width:1200px;margin:0 auto;padding:20px 6% 36px}
     section{margin:32px 0}
