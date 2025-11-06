@@ -1,0 +1,127 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Madhubani Realty — Properties</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Inter, Poppins, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;background:#f7fafc;color:#0f172a}
+    a{text-decoration:none;color:inherit}header{background:#0b1220;color:#fff;padding:14px 6%;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:1000;box-shadow:0 6px 20px rgba(2,6,23,0.12)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{width:40px;height:40px;border-radius:10px;background:#fff;padding:5px}
+nav ul{display:flex;list-style:none;gap:18px}
+nav ul li a{color:#fff;font-weight:600;padding:8px;border-radius:8px}
+nav ul li a:hover{background:rgba(255,255,255,0.08)}
+
+.hero{background:linear-gradient(180deg,#0b1220,#0f1a2b);color:#fff;text-align:center;padding:70px 6% 60px}
+.hero h1{font-size:2.2rem;font-weight:800;margin-bottom:10px}
+.hero p{color:#cfe0ff;max-width:800px;margin:auto}
+
+.filters{max-width:1000px;margin:30px auto;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;padding:0 6%}
+.filters input,.filters select{padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;min-width:180px}
+
+main{max-width:1200px;margin:auto;padding:20px 6% 60px}
+.grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 8px 25px rgba(2,6,23,0.06);transition:.2s}
+.card:hover{transform:translateY(-6px)}
+.media img{width:100%;height:200px;object-fit:cover}
+.body{padding:16px;text-align:center}
+.body h4{font-size:1.1rem;margin-bottom:6px;color:#06283d;font-weight:700}
+.meta{font-size:0.93rem;color:#475569;margin-bottom:10px}
+.cta{display:inline-block;background:#06283d;color:#fff;padding:10px 18px;border-radius:999px;font-weight:700;margin-top:8px}
+
+footer{background:#0b1220;color:#fff;text-align:center;padding:25px 6%;margin-top:40px;border-top-left-radius:10px;border-top-right-radius:10px}
+
+/* Modal */
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:2000;padding:20px}
+.modal.active{display:flex}
+.modal-content{background:#fff;border-radius:14px;max-width:700px;width:100%;overflow:hidden;animation:pop .25s ease}
+@keyframes pop{from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-header img{width:100%;height:280px;object-fit:cover}
+.modal-body{padding:20px}
+.modal-body h2{color:#06283d;margin-bottom:6px}
+.modal-body .meta{color:#475569;margin-bottom:12px}
+.modal-body p{color:#334155;line-height:1.6;margin-bottom:20px}
+iframe{width:100%;height:260px;border:0;border-radius:10px;margin-bottom:20px}
+.modal-actions{display:flex;justify-content:space-between;align-items:center}
+.btn{padding:10px 18px;border-radius:999px;font-weight:700;text-align:center;cursor:pointer}
+.btn.whatsapp{background:#25d366;color:#fff}
+.btn.close{background:#e2e8f0;color:#0f172a}
+
+  </style>
+</head>
+<body><header>
+  <div class="brand">
+    <img src="https://i.ibb.co/214zt4vb/IMG-20251031-235646.png" alt="logo">
+    <h1>Madhubani Realty</h1>
+  </div>
+  <nav>
+    <ul>
+      <li><a href="index.html">Home</a></li>
+      <li><a href="#">Properties</a></li>
+    </ul>
+  </nav>
+</header><section class="hero">
+  <h1>Explore Our Properties</h1>
+  <p>Find your dream home in Madhubani — browse our full listings below.</p>
+</section><div class="filters">
+  <input type="text" placeholder="Search by area or name">
+  <select><option>All Types</option><option>Apartment</option><option>Villa</option><option>House</option></select>
+  <select><option>Price Range</option><option>Under ₹50 L</option><option>₹50–80 L</option><option>Above ₹80 L</option></select>
+</div><main>
+  <div class="grid">
+    <!-- Property cards -->
+    <div class="card" data-id="1"><div class="media"><img src="https://i.ibb.co/Fbnkr2gn/images-3.jpg"></div><div class="body"><h4>Luxury Villa — Station Road</h4><div class="meta">₹85 L • 4 BHK • 2800 sq ft</div><a href="#" class="cta view-btn">View Details</a></div></div>
+    <div class="card" data-id="2"><div class="media"><img src="https://i.ibb.co/chw00BZ1/residential-apartment-in-patna.jpg"></div><div class="body"><h4>Modern Apartment — Town Area</h4><div class="meta">₹55 L • 3 BHK • 1800 sq ft</div><a href="#" class="cta view-btn">View Details</a></div></div>
+    <div class="card" data-id="3"><div class="media"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80"></div><div class="body"><h4>Cozy Family Home — Bela Road</h4><div class="meta">₹35 L • 2 BHK • 1200 sq ft</div><a href="#" class="cta view-btn">View Details</a></div></div>
+    <div class="card" data-id="4"><div class="media"><img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=1400&q=80"></div><div class="body"><h4>Greenfield Villa — North End</h4><div class="meta">₹92 L • 5 BHK • 3200 sq ft</div><a href="#" class="cta view-btn">View Details</a></div></div>
+    <div class="card" data-id="5"><div class="media"><img src="https://images.unsplash.com/photo-1598928506311-c55ded91a20d?auto=format&fit=crop&w=1400&q=80"></div><div class="body"><h4>Sunrise Apartment — Central City</h4><div class="meta">₹60 L • 3 BHK • 1900 sq ft</div><a href="#" class="cta view-btn">View Details</a></div></div>
+    <div class="card" data-id="6"><div class="media"><img src="https://images.unsplash.com/photo-1572120360610-d971b9d7767c?auto=format&fit=crop&w=1400&q=80"></div><div class="body"><h4>Compact Studio — Near Market</h4><div class="meta">₹22 L • 1 BHK • 700 sq ft</div><a href="#" class="cta view-btn">View Details</a></div></div>
+    <div class="card" data-id="7"><div class="media"><img src="https://images.unsplash.com/photo-1600585154207-6b7b7b6f5c4f?auto=format&fit=crop&w=1400&q=80"></div><div class="body"><h4>Hill View House — West Side</h4><div class="meta">₹45 L • 2 BHK • 1300 sq ft</div><a href="#" class="cta view-btn">View Details</a></div></div>
+    <div class="card" data-id="8"><div class="media"><img src="https://images.unsplash.com/photo-1600585154154-7419b62b10bf?auto=format&fit=crop&w=1400&q=80"></div><div class="body"><h4>Lakefront Villa — East Point</h4><div class="meta">₹1.1 Cr • 5 BHK • 4000 sq ft</div><a href="#" class="cta view-btn">View Details</a></div></div>
+    <div class="card" data-id="9"><div class="media"><img src="https://images.unsplash.com/photo-1560185008-b033106af12d?auto=format&fit=crop&w=1400&q=80"></div><div class="body"><h4>Urban Residency — Main Road</h4><div class="meta">₹50 L • 3 BHK • 1600 sq ft</div><a href="#" class="cta view-btn">View Details</a></div></div>
+  </div>
+</main><footer>© 2025 Madhubani Realty · All rights reserved.</footer><!-- Modal --><div class="modal" id="propertyModal">
+  <div class="modal-content">
+    <div class="modal-header"><img id="modalImg" src=""></div>
+    <div class="modal-body">
+      <h2 id="modalTitle"></h2>
+      <div class="meta" id="modalMeta"></div>
+      <p id="modalDesc"></p>
+      <iframe id="modalMap" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3670.14006287345!2d86.0882!3d26.3467!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39ecf54d2d8fcb7d%3A0x8d87b7b03f06f7b4!2sMadhubani%2C%20Bihar!5e0!3m2!1sen!2sin!4v1700000000000"></iframe>
+      <div class="modal-actions">
+        <a href="https://wa.me/8102253186" target="_blank" class="btn whatsapp">Contact on WhatsApp</a>
+        <div class="btn close" id="closeModal">Close</div>
+      </div>
+    </div>
+  </div>
+</div><script>
+  const modal=document.getElementById('propertyModal');
+  const modalImg=document.getElementById('modalImg');
+  const modalTitle=document.getElementById('modalTitle');
+  const modalMeta=document.getElementById('modalMeta');
+  const modalDesc=document.getElementById('modalDesc');
+  const closeBtn=document.getElementById('closeModal');
+
+  const randomDesc=[
+    'A premium property designed for comfort and convenience. Surrounded by greenery and modern amenities.',
+    'This spacious home features elegant interiors, natural lighting, and prime connectivity.',
+    'Located in a peaceful neighborhood, this property offers both style and practicality.',
+    'Perfect for families looking for a luxurious yet affordable home with great access.',
+  ];
+
+  document.querySelectorAll('.view-btn').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.preventDefault();
+      const card=e.target.closest('.card');
+      modalImg.src=card.querySelector('img').src;
+      modalTitle.textContent=card.querySelector('h4').textContent;
+      modalMeta.textContent=card.querySelector('.meta').textContent;
+      modalDesc.textContent=randomDesc[Math.floor(Math.random()*randomDesc.length)];
+      modal.classList.add('active');
+    });
+  });
+  closeBtn.addEventListener('click',()=>modal.classList.remove('active'));
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('active')});
+</script></body>
+</html>
