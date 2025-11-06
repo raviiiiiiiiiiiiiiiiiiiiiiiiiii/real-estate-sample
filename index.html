@@ -548,5 +548,31 @@ section{margin:0}
 
     /* OPTIONAL: prevent iframe heavy load until modal open (left as simple embed now) */
   </script>
+  <script>
+  // WhatsApp Dynamic Message Script
+  (function() {
+    const waButtons = document.querySelectorAll('.whatsapp-contact');
+
+    function makeWhatsAppLink(phone, message) {
+      const normalized = String(phone).replace(/[^0-9]/g, '');
+      const text = encodeURIComponent(message);
+      return `https://wa.me/${normalized}?text=${text}`;
+    }
+
+    waButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        const card = btn.closest('.card');
+        const propName = card?.getAttribute('data-prop-name') || 'this property';
+        const phone = btn.getAttribute('data-phone') || '918102253186'; // change number if needed
+        const message = `I'm interested in "${propName}"`;
+
+        const waLink = makeWhatsAppLink(phone, message);
+        window.open(waLink, '_blank');
+      });
+    });
+  })();
+</script>
 </body>
 </html>
