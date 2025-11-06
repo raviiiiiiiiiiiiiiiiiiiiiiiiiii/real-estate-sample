@@ -94,8 +94,53 @@ section{margin:0}
     .btn-outline{background:transparent;border:2px solid #06283d;color:#06283d;padding:8px 14px;border-radius:999px;font-weight:700}
 
     /* focus/services/why/etc */
-    .focus-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:stretch}
-    .focus-card{background:#fff;padding:18px;border-radius:10px;text-align:center;box-shadow:0 8px 22px rgba(2,6,23,0.04)}
+    .focus-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: stretch;
+  text-align: center;
+}
+
+.focus-card {
+  background: #fff;
+  padding: 28px 20px;
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgba(2,6,23,0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.focus-card:hover {
+  transform: translateY(-5px);
+}
+
+.focus-icon-wrap {
+  width: 70px;
+  height: 70px;
+  background: #f1f5f9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.focus-icon-wrap img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  opacity: 0.95;
+}
+
+.focus-card h4 {
+  font-size: 1.05rem;
+  color: #06283d;
+  font-weight: 700;
+}
     .services-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
     .service-card{background:#fff;padding:16px;border-radius:10px;box-shadow:0 8px 22px rgba(2,6,23,0.04);text-align:center}
     .why-list{max-width:900px;margin:0 auto;list-style:none;padding:0}
