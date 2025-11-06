@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Madhubani Realty — Properties</title>
+  <style>
+    /* reset */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{
+      font-family:Inter, Poppins, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+      background:#f7fafc;
+      color:#0f172a;
+      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+      line-height:1.45;
+    }
+    a{color:inherit;text-decoration:none}
+    img{display:block;max-width:100%}
+
+    /* hero (no header above) */
+    .hero{
+      background:linear-gradient(180deg,#0b1220,#0f1a2b);
+      color:#e6eefc;
+      text-align:center;
+      padding:28px 6% 18px;
+    }
+    .hero h1{font-size:2rem;margin-bottom:8px;font-weight:800}
+    .hero p{max-width:900px;margin:0 auto;color:#cfe0ff;font-size:0.98rem}
+
+    main{max-width:1200px;margin:0 auto;padding:20px 6% 36px}
+
+    /* filters */
+    .filters{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:18px}
+    .filters select{padding:10px 12px;border-radius:8px;border:1px solid #e2e8f0;min-width:160px;background:#fff}
+
+    /* grid + cards */
+    .grid{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+    .card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(2,6,23,0.06);display:flex;flex-direction:column}
+    .media{height:220px;overflow:hidden}
+    .media img{width:100%;height:100%;object-fit:cover;display:block}
+    .body{padding:16px;display:flex;flex-direction:column;gap:10px}
+    .body h4{font-size:1rem;color:#06283d;margin:0 0 6px;font-weight:700}
+    .meta{color:#556077;font-size:0.95rem}
+    .card-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto}
+    .card-footer .cta{display:inline-block;padding:10px 14px;border-radius:999px;font-weight:700;font-size:0.92rem;text-decoration:none}
+
+    /* view and whatsapp buttons */
+    .view-btn{background:#06283d;color:#fff}
+    .whatsapp-contact{background:#25d366;color:#fff;box-shadow:0 8px 22px rgba(37,211,102,0.12)}
+    .view-btn:hover{opacity:0.95}
+    .whatsapp-contact:hover{opacity:0.95}
+
+    footer{background:#0b1220;color:#fff;padding:20px 6%;text-align:center;border-top-left-radius:10px;border-top-right-radius:10px;margin-top:28px}
+
+    /* modal */
+    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;z-index:2000;padding:18px}
+    .modal.active{display:flex}
+    .modal-content{background:#fff;border-radius:12px;max-width:900px;width:100%;max-height:92vh;overflow-y:auto;box-shadow:0 18px 60px rgba(2,6,23,0.3)}
+    .modal-media{width:100%;height:320px;overflow:hidden;border-top-left-radius:12px;border-top-right-radius:12px}
+    .modal-media img{width:100%;height:100%;object-fit:cover;display:block}
+    .modal-body{padding:18px}
+    .modal-body h2{color:#06283d;margin-bottom:6px}
+    .modal-body .meta{color:#475569;margin-bottom:12px}
+    .details-list{margin-bottom:14px;color:#334155;font-size:0.95rem;padding-left:18px}
+    .details-list li{margin-bottom:8px}
+    .modal-body p{color:#334155;line-height:1.6;margin-bottom:14px}
+    .map-wrap{width:100%;height:260px;border-radius:8px;overflow:hidden;border:1px solid #eef3f8;margin-bottom:14px}
+    .modal-actions{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .btn{padding:10px 18px;border-radius:999px;font-weight:700;text-align:center;cursor:pointer}
+    .btn.whatsapp{background:#25d366;color:#fff;text-decoration:none}
+    .btn.close{background:#e2e8f0;color:#0f172a}
+    .modal-close-x{position:absolute;right:14px;top:12px;background:#fff;border-radius:999px;padding:8px;cursor:pointer;box-shadow:0 6px 18px rgba(2,6,23,0.08)}
+
+    /* responsive tweaks */
+    @media(max-width:700px){
+      .modal-media{height:200px}
+      .grid{gap:14px}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HERO (no header included per request) -->
+  <section class="hero">
+    <h1>All Properties</h1>
+    <p>Browse every listing. Use filters to narrow down by type and price range. Click "View Details" for full information and map.</p>
+  </section>
+
+  <main>
+    <!-- filters -->
+    <div class="filters">
+      <select id="typeFilter">
+        <option value="all">All Types</option>
+        <option value="apartment">Apartment</option>
+        <option value="villa">Villa</option>
+        <option value="house">House</option>
+        <option value="studio">Studio</option>
+      </select>
+
+      <select id="priceFilter">
+        <option value="all">All Prices</option>
+        <option value="under50">Under ₹50 L</option>
+        <option value="50-80">₹50–80 L</option>
+        <option value="above80">Above ₹80 L</option>
+      </select>
+    </div>
+
+    <!-- GRID: cards use same logic as index (data-prop name + buttons) -->
+    <div class="grid" id="propertyGrid">
+      <div class="card" data-type="villa" data-price="above80" data-prop="Luxury Villa — Station Road">
+        <div class="media"><img src="https://i.ibb.co/Fbnkr2gn/images-3.jpg" alt="Luxury Villa"></div>
+        <div class="body">
+          <h4>Luxury Villa — Station Road</h4>
+          <div class="meta">₹85 L • 4 BHK • 2800 sq ft</div>
+          <div class="card-footer">
+            <a class="cta view-btn" href="#!" data-key="Luxury Villa — Station Road">View Details</a>
+            <a class="cta whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-type="apartment" data-price="50-80" data-prop="Modern Apartment — Town Area">
+        <div class="media"><img src="https://i.ibb.co/chw00BZ1/residential-apartment-in-patna.jpg" alt="Modern Apartment"></div>
+        <div class="body">
+          <h4>Modern Apartment — Town Area</h4>
+          <div class="meta">₹55 L • 3 BHK • 1800 sq ft</div>
+          <div class="card-footer">
+            <a class="cta view-btn" href="#!" data-key="Modern Apartment — Town Area">View Details</a>
+            <a class="cta whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-type="house" data-price="under50" data-prop="Cozy Family Home — Bela Road">
+        <div class="media"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80" alt="Cozy Home"></div>
+        <div class="body">
+          <h4>Cozy Family Home — Bela Road</h4>
+          <div class="meta">₹35 L • 2 BHK • 1200 sq ft</div>
+          <div class="card-footer">
+            <a class="cta view-btn" href="#!" data-key="Cozy Family Home — Bela Road">View Details</a>
+            <a class="cta whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- More sample cards -->
+      <div class="card" data-type="villa" data-price="above80" data-prop="Greenfield Villa — North End">
+        <div class="media"><img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=1400&q=80" alt="Greenfield Villa"></div>
+        <div class="body">
+          <h4>Greenfield Villa — North End</h4>
+          <div class="meta">₹92 L • 5 BHK • 3200 sq ft</div>
+          <div class="card-footer">
+            <a class="cta view-btn" href="#!" data-key="Greenfield Villa — North End">View Details</a>
+            <a class="cta whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-type="apartment" data-price="50-80" data-prop="Sunrise Apartment — Central City">
+        <div class="media"><img src="https://images.unsplash.com/photo-1598928506311-c55ded91a20d?auto=format&fit=crop&w=1400&q=80" alt="Sunrise Apartment"></div>
+        <div class="body">
+          <h4>Sunrise Apartment — Central City</h4>
+          <div class="meta">₹60 L • 3 BHK • 1900 sq ft</div>
+          <div class="card-footer">
+            <a class="cta view-btn" href="#!" data-key="Sunrise Apartment — Central City">View Details</a>
+            <a class="cta whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-type="studio" data-price="under50" data-prop="Compact Studio — Near Market">
+        <div class="media"><img src="https://images.unsplash.com/photo-1572120360610-d971b9d7767c?auto=format&fit=crop&w=1400&q=80" alt="Compact Studio"></div>
+        <div class="body">
+          <h4>Compact Studio — Near Market</h4>
+          <div class="meta">₹22 L • 1 BHK • 700 sq ft</div>
+          <div class="card-footer">
+            <a class="cta view-btn" href="#!" data-key="Compact Studio — Near Market">View Details</a>
+            <a class="cta whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-type="house" data-price="under50" data-prop="Hill View House — West Side">
+        <div class="media"><img src="https://images.unsplash.com/photo-1600585154207-6b7b7b6f5c4f?auto=format&fit=crop&w=1400&q=80" alt="Hill View House"></div>
+        <div class="body">
+          <h4>Hill View House — West Side</h4>
+          <div class="meta">₹45 L • 2 BHK • 1300 sq ft</div>
+          <div class="card-footer">
+            <a class="cta view-btn" href="#!" data-key="Hill View House — West Side">View Details</a>
+            <a class="cta whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" data-type="villa" data-price="above80" data-prop="Lakefront Villa — East Point">
+        <div class="media"><img src="https://images.unsplash.com/photo-1600585154154-7419b62b10bf?auto=format&fit=crop&w=1400&q=80" alt="Lakefront Villa"></div>
+        <div class="body">
+          <h4>Lakefront Villa — East Point</h4>
+          <div class="meta">₹1.1 Cr • 5 BHK • 4000 sq ft</div>
+          <div class="card-footer">
+            <a class="cta view-btn" href="#!" data-key="Lakefront Villa — East Point">View Details</a>
+            <a class="cta whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>© 2025 Madhubani Realty · All rights reserved.</footer>
+
+  <!-- Modal (single reusable modal) -->
+  <div class="modal" id="propertyModal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close-x" id="modalCloseX" aria-label="Close">&times;</button>
+      <div class="modal-media"><img id="modalImg" src="" alt="Property"></div>
+      <div class="modal-body">
+        <h2 id="modalTitle"></h2>
+        <div class="meta" id="modalMeta"></div>
+        <ul class="details-list" id="modalDetails"></ul>
+        <p id="modalDesc"></p>
+        <div class="map-wrap" id="modalMapWrap">
+          <iframe id="modalMap" src="https://www.google.com/maps?q=Madhubani&output=embed" title="Location"></iframe>
+        </div>
+        <div class="modal-actions">
+          <a id="whatsappBtn" class="btn whatsapp" href="#" target="_blank" rel="noopener">Contact on WhatsApp</a>
+          <div class="btn close" id="closeModal">Close</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Filters (type + price)
+    (function(){
+      const typeFilter = document.getElementById('typeFilter');
+      const priceFilter = document.getElementById('priceFilter');
+      const grid = document.getElementById('propertyGrid');
+      const cards = Array.from(grid.querySelectorAll('.card'));
+
+      function filter(){
+        const typeVal = typeFilter ? typeFilter.value : 'all';
+        const priceVal = priceFilter ? priceFilter.value : 'all';
+
+        cards.forEach(card => {
+          const cardType = card.dataset.type || 'all';
+          const cardPrice = card.dataset.price || 'all';
+          const okType = (typeVal === 'all' || cardType === typeVal);
+          const okPrice = (priceVal === 'all' || cardPrice === priceVal);
+          card.style.display = (okType && okPrice) ? '' : 'none';
+        });
+      }
+
+      if (typeFilter) typeFilter.addEventListener('change', filter);
+      if (priceFilter) priceFilter.addEventListener('change', filter);
+    })();
+
+    // Data object for modal content (matches data-prop values)
+    (function(){
+      const data = {
+        'Luxury Villa — Station Road': {
+          img: 'https://i.ibb.co/Fbnkr2gn/images-3.jpg',
+          meta: '₹85 L • 4 BHK • 2800 sq ft • Station Road',
+          details: ['Bedrooms: 4','Kitchens: 2','Bathrooms: 3','Parking: Yes','Garden Area: 200 sq ft'],
+          desc: 'This luxurious villa features a grand design with spacious rooms, premium finishes, and a private garden. Positioned near Station Road, it provides quick access to local markets and transit while maintaining a peaceful setting.'
+        },
+        'Modern Apartment — Town Area': {
+          img: 'https://i.ibb.co/chw00BZ1/residential-apartment-in-patna.jpg',
+          meta: '₹55 L • 3 BHK • 1800 sq ft',
+          details: ['Bedrooms: 3','Kitchens: 1','Bathrooms: 2','Balcony: Yes','Lift: Yes'],
+          desc: 'A modern 3 BHK apartment in the heart of town. Close to schools, shopping, and transport. Contemporary layout and good ventilation.'
+        },
+        'Cozy Family Home — Bela Road': {
+          img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80',
+          meta: '₹35 L • 2 BHK • 1200 sq ft',
+          details: ['Bedrooms: 2','Kitchens: 1','Bathrooms: 1','Parking: Street'],
+          desc: 'A cozy family home located on Bela Road with a compact, practical floor plan. Friendly neighborhood and easy access to local amenities.'
+        },
+        'Greenfield Villa — North End': {
+          img: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=1400&q=80',
+          meta: '₹92 L • 5 BHK • 3200 sq ft',
+          details: ['Bedrooms: 5','Kitchens: 2','Bathrooms: 4','Parking: Garage','Garden: Large'],
+          desc: 'Greenfield Villa offers high-end finishes and a large garden. Quiet neighborhood, premium fit-outs, and great views.'
+        },
+        'Sunrise Apartment — Central City': {
+          img: 'https://images.unsplash.com/photo-1598928506311-c55ded91a20d?auto=format&fit=crop&w=1400&q=80',
+          meta: '₹60 L • 3 BHK • 1900 sq ft',
+          details: ['Bedrooms: 3','Kitchens: 1','Bathrooms: 2','Balcony: Yes'],
+          desc: 'Sunrise Apartment features a pleasant city view, modern amenities, and secure building access.'
+        },
+        'Compact Studio — Near Market': {
+          img: 'https://images.unsplash.com/photo-1572120360610-d971b9d7767c?auto=format&fit=crop&w=1400&q=80',
+          meta: '₹22 L • 1 BHK • 700 sq ft',
+          details: ['Bedrooms: 1','Kitchens: 1','Bathrooms: 1','Floor: 3rd'],
+          desc: 'Compact and efficient studio close to the market — ideal for students or singles.'
+        },
+        'Hill View House — West Side': {
+          img: 'https://images.unsplash.com/photo-1600585154207-6b7b7b6f5c4f?auto=format&fit=crop&w=1400&q=80',
+          meta: '₹45 L • 2 BHK • 1300 sq ft',
+          details: ['Bedrooms: 2','Kitchens: 1','Bathrooms: 2','Parking: Street'],
+          desc: 'Hill View House provides calm surroundings with a scenic outlook and practical living spaces.'
+        },
+        'Lakefront Villa — East Point': {
+          img: 'https://images.unsplash.com/photo-1600585154154-7419b62b10bf?auto=format&fit=crop&w=1400&q=80',
+          meta: '₹1.1 Cr • 5 BHK • 4000 sq ft',
+          details: ['Bedrooms: 5','Kitchens: 2','Bathrooms: 5','Lakefront: Yes'],
+          desc: 'A premium lakefront villa with expansive views, high-end finishes, and luxury amenities.'
+        }
+      };
+
+      // modal elements
+      const modal = document.getElementById('propertyModal');
+      const modalImg = document.getElementById('modalImg');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalMeta = document.getElementById('modalMeta');
+      const modalDetails = document.getElementById('modalDetails');
+      const modalDesc = document.getElementById('modalDesc');
+      const modalMap = document.getElementById('modalMap');
+      const whatsappBtn = document.getElementById('whatsappBtn');
+      const closeModal = document.getElementById('closeModal');
+      const modalCloseX = document.getElementById('modalCloseX');
+
+      // open modal when clicking "View Details"
+      document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', function(e){
+          e.preventDefault();
+          const card = this.closest('.card');
+          const key = card && (card.dataset.prop || this.dataset.key);
+          if (!key) return;
+          const item = data[key];
+          if (!item) return;
+
+          // populate modal
+          modalImg.src = item.img;
+          modalImg.alt = key;
+          modalTitle.textContent = key;
+          modalMeta.textContent = item.meta;
+
+          // details list
+          modalDetails.innerHTML = '';
+          item.details.forEach(d => {
+            const li = document.createElement('li');
+            li.textContent = d;
+            modalDetails.appendChild(li);
+          });
+
+          modalDesc.textContent = item.desc || '';
+
+          // set a simple map query (replace with exact coords if you have them)
+          const mapQuery = encodeURIComponent(key + ' Madhubani');
+          modalMap.src = 'https://www.google.com/maps?q=' + mapQuery + '&output=embed';
+
+          // whatsapp prefilled message for this property (button inside modal)
+          whatsappBtn.href = 'https://wa.me/918102253186?text=' + encodeURIComponent("I'm interested in \"" + key + "\"");
+
+          // show modal
+          modal.classList.add('active');
+          modal.setAttribute('aria-hidden','false');
+          document.body.style.overflow = 'hidden';
+        });
+      });
+
+      function closeHandler(){
+        modal.classList.remove('active');
+        modal.setAttribute('aria-hidden','true');
+        modalMap.src = 'about:blank';
+        document.body.style.overflow = '';
+      }
+
+      closeModal.addEventListener('click', closeHandler);
+      modalCloseX.addEventListener('click', closeHandler);
+
+      // click outside content closes
+      modal.addEventListener('click', function(e){
+        if (e.target === modal) closeHandler();
+      });
+
+      // ESC closes
+      document.addEventListener('keydown', function(e){
+        if (e.key === 'Escape' && modal.classList.contains('active')) closeHandler();
+      });
+
+      // WhatsApp buttons on cards: dynamic message using parent card's data-prop
+      document.querySelectorAll('.whatsapp-contact').forEach(btn => {
+        btn.addEventListener('click', function(e){
+          e.preventDefault();
+          const card = this.closest('.card');
+          const propName = card && (card.dataset.prop || card.querySelector('h4')?.innerText) || 'this property';
+          const phone = this.getAttribute('data-phone') || '918102253186';
+          const normalized = String(phone).replace(/[^0-9]/g,'');
+          const message = "I'm interested in \"" + propName + "\"";
+          const url = 'https://wa.me/' + normalized + '?text=' + encodeURIComponent(message);
+          // open in new tab (mobile opens app)
+          window.open(url, '_blank');
+        });
+      });
+
+    })();
+  </script>
+</body>
+</html>
