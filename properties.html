@@ -3,389 +3,315 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Madhubani Realty — Properties</title>
+  <title>All Properties — Madhubani Realty</title>
   <style>
-    /* RESET */
     *{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%}
     body{
       font-family:Inter, Poppins, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-      background:#f7fafc;color:#0f172a;line-height:1.45;
-      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+      background:#f7fafc;
+      color:#0f172a;
+      line-height:1.45;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
     }
     a{color:inherit;text-decoration:none}
     img{display:block;max-width:100%}
 
-    /* NOTE: Header intentionally removed on this page per request */
+    /* PAGE STRUCTURE */
+    main{max-width:1200px;margin:0 auto;padding:30px 6%}
+    h2.section-title{font-size:1.7rem;text-align:center;margin-bottom:24px;font-weight:800;color:#0b1220}
 
-    /* HERO / INTRO */
-    .intro{
-      background:linear-gradient(180deg,#0b1220,#0f1a2b);
-      color:#e6eefc;
-      padding:20px 6%;
-      text-align:center;
-      margin:0;
+    /* PROPERTY CARDS */
+    .grid{display:grid;gap:18px}
+    .grid-3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+    .card{
+      background:#fff;
+      border-radius:12px;
+      overflow:hidden;
+      box-shadow:0 8px 26px rgba(2,6,23,0.06);
+      transition:transform .16s;
     }
-    .intro .wrap{max-width:960px;margin:0 auto}
-    .intro h2{font-size:1.9rem;line-height:1.04;margin-bottom:10px;font-weight:800}
-    .intro p{max-width:880px;margin:0 auto;color:#cfe0ff;font-size:0.98rem;line-height:1.6}
-
-    /* MAIN LAYOUT */
-    main{max-width:1200px;margin:0 auto;padding:0 6% 36px}
-    section{margin:0 0 32px}
-    .section-title{font-size:1.6rem;color:#0b1220;text-align:center;margin:18px 0;font-weight:800}
-
-    /* GRID + CARDS (same logic as index.html) */
-    .grid{display:grid;gap:16px}
-    .grid-3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
-    .card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 26px rgba(2,6,23,0.06);transition:transform .16s}
     .card:hover{transform:translateY(-6px)}
     .card .media{height:200px;overflow:hidden}
-    .card .media img{width:100%;height:100%;object-fit:cover;display:block}
-    .card .body{padding:14px;text-align:left}
-    .card h4{font-size:1rem;color:#06283d;margin-bottom:8px;font-weight:700}
+    .card .media img{width:100%;height:100%;object-fit:cover}
+    .card .body{padding:16px;text-align:left}
+    .card h4{font-size:1.05rem;color:#06283d;margin-bottom:8px;font-weight:700}
     .meta{color:#556077;font-size:0.92rem;margin-bottom:10px}
-    .card-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
-    .cta{display:inline-block;background:#06283d;color:#fff;padding:10px 14px;border-radius:999px;font-weight:700;font-size:0.92rem;text-decoration:none}
-    .cta.view-more{background:#06283d}
 
-    /* WhatsApp Contact Button Styling */
-    .whatsapp-contact {
-      background: #25d366;
-      color: #fff;
-      box-shadow: 0 6px 18px rgba(37, 211, 102, 0.15);
-      transition: background 0.15s ease;
-      text-decoration:none;
+    .card-footer{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+    .cta{
+      display:inline-block;
       padding:10px 14px;
       border-radius:999px;
       font-weight:700;
-      display:inline-block;
+      font-size:0.92rem;
+      text-decoration:none;
+      background:#06283d;
+      color:#fff;
+    }
+    .whatsapp-contact{
+      background:#25d366;
+      color:#fff;
+      box-shadow:0 6px 18px rgba(37,211,102,0.15);
+      transition:background .15s ease;
     }
     .whatsapp-contact:hover{background:#1ebd5a}
 
-    /* focus/services/why/etc */
-    .focus-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-items:stretch;text-align:center}
-    .focus-card{background:#fff;padding:28px 20px;border-radius:14px;box-shadow:0 8px 22px rgba(2,6,23,0.04);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:transform 0.2s ease}
-    .focus-card:hover{transform:translateY(-5px)}
-    .focus-icon-wrap{width:70px;height:70px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
-    .focus-icon-wrap img{width:42px;height:42px;object-fit:contain;opacity:0.95}
-    .focus-card h4{font-size:1.05rem;color:#06283d;font-weight:700}
-
-    .services-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-    .service-card{background:#fff;padding:16px;border-radius:10px;box-shadow:0 8px 22px rgba(2,6,23,0.04);text-align:center}
-    .why-list{max-width:900px;margin:0 auto;list-style:none;padding:0}
-    .why-list li{padding:12px 0;border-bottom:1px solid #eef3f8;color:#475569;font-size:1rem}
-    .why-list li:last-child{border-bottom:none}
-
-    .test-card{background:#fff;padding:16px;border-radius:10px;box-shadow:0 8px 20px rgba(2,6,23,0.05);margin-bottom:12px}
-    .agent{background:#fff;padding:14px;border-radius:10px;text-align:center;box-shadow:0 8px 20px rgba(2,6,23,0.05)}
-    .agent img{width:90px;height:90px;border-radius:50%;object-fit:cover;margin:0 auto 10px}
-
-    .about p{max-width:900px;margin:0 auto;color:#475569;line-height:1.6}
-    footer{background:#0b1220;color:#fff;padding:20px 6%;text-align:center;border-top-left-radius:10px;border-top-right-radius:10px;margin-top:28px}
-
-    /* whatsapp float */
-    .whatsapp-float{position:fixed;right:18px;bottom:18px;z-index:1400;width:62px;height:62px;border-radius:999px;background:#25d366;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(2,6,23,0.18)}
-    .whatsapp-float svg{width:30px;height:30px;fill:#fff}
-
     /* MODAL */
-    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:1500}
-    .modal{background:#fff;border-radius:12px;max-width:900px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 18px 60px rgba(2,6,23,0.3)}
-    .modal .modal-media{height:260px;overflow:hidden;border-top-left-radius:12px;border-top-right-radius:12px}
-    .modal .modal-media img{width:100%;height:100%;object-fit:cover;display:block}
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(2,6,23,0.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      z-index:1500;
+    }
+    .modal{
+      background:#fff;
+      border-radius:12px;
+      max-width:900px;
+      width:100%;
+      max-height:90vh;
+      overflow:auto;
+      box-shadow:0 18px 60px rgba(2,6,23,0.3);
+      position:relative;
+    }
+    .modal .modal-media{
+      height:260px;
+      overflow:hidden;
+      border-top-left-radius:12px;
+      border-top-right-radius:12px;
+    }
+    .modal .modal-media img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+    }
     .modal .modal-body{padding:18px}
-    .modal .modal-title{font-size:1.15rem;font-weight:800;margin-bottom:8px;color:#06283d}
-    .modal .modal-desc{color:#475569;margin-bottom:12px}
-    .details-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
-    .details-item{background:#f7fafc;padding:10px;border-radius:8px;text-align:center}
+    .modal .modal-title{font-size:1.2rem;font-weight:800;margin-bottom:8px;color:#06283d}
+    .modal .modal-desc{color:#475569;margin-bottom:12px;line-height:1.55}
+    .details-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+      gap:10px;
+      margin-bottom:14px;
+    }
+    .details-item{
+      background:#f7fafc;
+      padding:10px;
+      border-radius:8px;
+      text-align:center;
+    }
     .details-item strong{display:block;color:#06283d;font-size:1rem}
-    .map-wrap{width:100%;height:240px;border-radius:8px;overflow:hidden;border:1px solid #e6eefc}
-    .modal-close{position:absolute;right:18px;top:12px;background:#fff;border-radius:999px;padding:6px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(2,6,23,0.12);cursor:pointer}
-
-    @media (max-width:700px){
-      .modal .modal-media{height:180px}
-      .details-grid{grid-template-columns:repeat(2,1fr)}
+    .map-wrap{
+      width:100%;
+      height:240px;
+      border-radius:8px;
+      overflow:hidden;
+      border:1px solid #e6eefc;
+    }
+    .modal-close{
+      position:absolute;
+      right:18px;
+      top:12px;
+      background:#fff;
+      border-radius:999px;
+      padding:6px;
+      width:36px;
+      height:36px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:0 6px 18px rgba(2,6,23,0.12);
+      cursor:pointer;
+      font-size:1.4rem;
+      font-weight:bold;
+      color:#06283d;
     }
 
-    .hidden{display:none}
+    footer{
+      background:#0b1220;
+      color:#fff;
+      text-align:center;
+      padding:20px 6%;
+      border-top-left-radius:10px;
+      border-top-right-radius:10px;
+      margin-top:36px;
+      font-size:0.9rem;
+    }
+
+    /* Floating WhatsApp Icon */
+    .whatsapp-float{
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      z-index:1400;
+      width:62px;
+      height:62px;
+      border-radius:999px;
+      background:#25d366;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:0 10px 30px rgba(2,6,23,0.18);
+    }
+    .whatsapp-float svg{width:30px;height:30px;fill:#fff}
   </style>
 </head>
 <body>
 
-  <!-- Header removed intentionally -->
-
-  <section class="intro" id="home">
-    <div class="wrap">
-      <h2>All Properties</h2>
-      <p>Browse our full list of properties. Click "View More" for details or "Contact on WhatsApp" to message us directly about a specific listing.</p>
-    </div>
-  </section>
-
   <main>
-    <section id="listings">
-      <h2 class="section-title">Properties</h2>
+    <h2 class="section-title">All Properties</h2>
 
-      <!-- === Cards block (same card logic as index.html) === -->
-      <div class="grid grid-3" role="list">
-        <!-- Property 1 -->
-        <div class="card" role="listitem" data-prop-name="Luxury Villa — Station Road">
-          <div class="media"><img src="https://i.ibb.co/Fbnkr2gn/images-3.jpg" alt="Luxury Villa"></div>
-          <div class="body">
-            <h4>Luxury Villa — Station Road</h4>
-            <div class="meta">₹85 L • 4 BHK • 2800 sq ft • Station Road</div>
-            <div class="card-footer">
-              <a class="cta view-more" href="#!" data-modal="modal-1">View More</a>
-              <a class="whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
-            </div>
-          </div>
+    <div class="grid grid-3">
+      <!-- Property 1 -->
+      <div class="card" data-prop-name="Luxury Villa — Station Road">
+        <div class="media">
+          <img src="https://i.ibb.co/Fbnkr2gn/images-3.jpg" alt="Luxury Villa">
         </div>
-
-        <!-- Property 2 -->
-        <div class="card" role="listitem" data-prop-name="Modern Apartment — Town Area">
-          <div class="media"><img src="https://i.ibb.co/chw00BZ1/residential-apartment-in-patna.jpg" alt="Modern Apartment"></div>
-          <div class="body">
-            <h4>Modern Apartment — Town Area</h4>
-            <div class="meta">₹55 L • 3 BHK • 1800 sq ft</div>
-            <div class="card-footer">
-              <a class="cta view-more" href="#!" data-modal="modal-2">View More</a>
-              <a class="whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
-            </div>
-          </div>
-        </div>
-
-        <!-- Property 3 -->
-        <div class="card" role="listitem" data-prop-name="Cozy Family Home — Bela Road">
-          <div class="media"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80" alt="Cozy Home"></div>
-          <div class="body">
-            <h4>Cozy Family Home — Bela Road</h4>
-            <div class="meta">₹35 L • 2 BHK • 1200 sq ft</div>
-            <div class="card-footer">
-              <a class="cta view-more" href="#!" data-modal="modal-3">View More</a>
-              <a class="whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
-            </div>
+        <div class="body">
+          <h4>Luxury Villa — Station Road</h4>
+          <div class="meta">₹85 L • 4 BHK • 2800 sq ft • Station Road</div>
+          <div class="card-footer">
+            <a class="cta view-more" href="#!" data-modal="modal-1">View More</a>
+            <a class="cta whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
           </div>
         </div>
       </div>
-      <!-- === end cards === -->
 
-    </section>
-
-    <section id="focus">
-      <h2 class="section-title">Our Main Focus</h2>
-      <div class="focus-grid">
-        <div class="focus-card">
-          <div class="focus-icon-wrap"><img src="https://cdn-icons-png.flaticon.com/512/992/992700.png" alt="satisfaction"></div>
-          <h4>Customer Satisfaction</h4>
+      <!-- Property 2 -->
+      <div class="card" data-prop-name="Modern Apartment — Town Area">
+        <div class="media">
+          <img src="https://i.ibb.co/chw00BZ1/residential-apartment-in-patna.jpg" alt="Modern Apartment">
         </div>
-        <div class="focus-card">
-          <div class="focus-icon-wrap"><img src="https://cdn-icons-png.flaticon.com/512/1048/1048953.png" alt="infrastructure"></div>
-          <h4>Quality Infrastructure</h4>
-        </div>
-        <div class="focus-card">
-          <div class="focus-icon-wrap"><img src="https://cdn-icons-png.flaticon.com/512/1170/1170576.png" alt="delivery"></div>
-          <h4>On Time Delivery</h4>
+        <div class="body">
+          <h4>Modern Apartment — Town Area</h4>
+          <div class="meta">₹55 L • 3 BHK • 1800 sq ft</div>
+          <div class="card-footer">
+            <a class="cta view-more" href="#!" data-modal="modal-2">View More</a>
+            <a class="cta whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
+          </div>
         </div>
       </div>
-    </section>
 
-    <section id="services">
-      <h2 class="section-title">Our Services</h2>
-      <div class="services-grid">
-        <div class="service-card"><h4>Property Buying</h4><p>We help buyers find right-fit properties and guide through paperwork and fair pricing.</p></div>
-        <div class="service-card"><h4>Property Selling</h4><p>Professional listing, photography, and buyer outreach to sell faster at the best price.</p></div>
-        <div class="service-card"><h4>Rent & Leasing</h4><p>Tenant verification, lease agreements, and rent management for hassle-free renting.</p></div>
+      <!-- Property 3 -->
+      <div class="card" data-prop-name="Cozy Family Home — Bela Road">
+        <div class="media">
+          <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80" alt="Cozy Home">
+        </div>
+        <div class="body">
+          <h4>Cozy Family Home — Bela Road</h4>
+          <div class="meta">₹35 L • 2 BHK • 1200 sq ft</div>
+          <div class="card-footer">
+            <a class="cta view-more" href="#!" data-modal="modal-3">View More</a>
+            <a class="cta whatsapp-contact" href="#!" data-phone="918102253186">Contact on WhatsApp</a>
+          </div>
+        </div>
       </div>
-    </section>
-
-    <section id="why">
-      <h2 class="section-title">Why Choose Us</h2>
-      <ul class="why-list">
-        <li>15+ years of trusted service in Madhubani’s property market.</li>
-        <li>Local expertise — agents who know the neighborhoods and buyers.</li>
-        <li>Fast responses and direct WhatsApp communication — no middlemen.</li>
-        <li>Custom-coded websites that are fast, clean, and easy to use.</li>
-        <li>Simple pricing — one-time setup, no hidden monthly charges.</li>
-      </ul>
-    </section>
-
-    <section id="testimonials" class="testimonials-wrap">
-      <h2 class="section-title">Testimonials</h2>
-      <div class="test-card"><p>“I listed my house and got three serious buyers within a week. They handled everything quickly.”</p><h5>— Rajesh Kumar</h5></div>
-      <div class="test-card"><p>“Great service and fast delivery. Their website made my agency look professional.”</p><h5>— Anita Devi</h5></div>
-      <div class="test-card"><p>“Communication was simple — WhatsApp support and no tech headaches. Highly recommend.”</p><h5>— Sandeep Yadav</h5></div>
-    </section>
-
-    <section id="agents">
-      <h2 class="section-title">Meet Our Agents</h2>
-      <div class="agents-grid" style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
-        <div class="agent"><img src="https://i.ibb.co/LdFdx8p4/Screenshot-20251009-104658-Instagram.jpg" alt="Ravi"><h4>Ravi Kumar</h4><p style="color:#556077">Property Expert — 10 years experience</p><a class="cta" href="https://wa.me/918102253186">Contact Now</a></div>
-        <div class="agent"><img src="https://i.ibb.co/HfkWtJHV/images-4.jpg" alt="Priya"><h4>Priya Singh</h4><p style="color:#556077">Commercial & Residential Specialist</p><a class="cta" href="https://wa.me/918102253186">Contact Now</a></div>
-        <div class="agent"><img src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=400&q=80" alt="Arun"><h4>Arun Patel</h4><p style="color:#556077">Luxury Property Consultant</p><a class="cta" href="https://wa.me/918102253186">Contact Now</a></div>
-      </div>
-    </section>
-
-    <section id="about">
-      <h2 class="section-title">About Us</h2>
-      <p class="about">Madhubani Realty is built on trust, transparency and local expertise. For over a decade we’ve guided homeowners, investors and businesses through buying, selling and renting with honesty and speed. Our team knows Madhubani — the neighborhoods, the buyers, the paperwork — and we combine that knowledge with modern presentation and direct WhatsApp support so your property gets seen and sold.</p>
-    </section>
+    </div>
   </main>
 
-  <footer>© 2025 Madhubani Realty · Custom-coded demo. All rights reserved.</footer>
+  <footer>© 2025 Madhubani Realty · All Rights Reserved.</footer>
 
   <a class="whatsapp-float" href="https://wa.me/918102253186" target="_blank" aria-label="Chat on WhatsApp">
-    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
       <path d="M16.04 2C8.54 2 2.5 8.04 2.5 15.54c0 2.73.72 5.33 2.1 7.64L2 30l7.02-2.18c2.19 1.2 4.68 1.83 7.02 1.83 7.5 0 13.54-6.04 13.54-13.54S23.54 2 16.04 2zm6.93 16.04c-.37-.18-2.18-1.08-2.52-1.2-.34-.13-.59-.18-.84.18s-.96 1.2-1.18 1.44-.44.27-.81.09c-.37-.18-1.56-.58-2.97-1.86-1.1-.98-1.84-2.18-2.06-2.55-.22-.37-.02-.57.16-.75.16-.16.37-.44.56-.66.18-.22.25-.37.37-.62.12-.25.06-.46-.03-.65-.09-.18-.84-2.01-1.15-2.76-.3-.72-.61-.63-.84-.64h-.72c-.25 0-.65.09-.99.46s-1.3 1.27-1.3 3.1C8.06 18.6 10.68 21 13 22.2c2.85 1.42 4.9 1.4 5.35 1.38.75-.04 2.18-.71 2.49-1.57.31-.86.31-1.6.22-1.75-.09-.15-.34-.25-.72-.42z"/>
     </svg>
   </a>
 
-  <!-- ===== MODALS (3 unique modals for the 3 featured properties) ===== -->
-  <div class="modal-backdrop" id="modal-1" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal1-title">
-      <button class="modal-close" aria-label="Close modal">&times;</button>
-      <div class="modal-media"><img src="https://i.ibb.co/Fbnkr2gn/images-3.jpg" alt="Luxury Villa — Station Road"></div>
+  <!-- ===== MODALS ===== -->
+  <div class="modal-backdrop" id="modal-1">
+    <div class="modal">
+      <div class="modal-close">&times;</div>
+      <div class="modal-media"><img src="https://i.ibb.co/Fbnkr2gn/images-3.jpg" alt="Luxury Villa"></div>
       <div class="modal-body">
-        <div class="modal-title" id="modal1-title">Luxury Villa — Station Road</div>
-        <div class="modal-desc">A premium 4 BHK villa with modern fittings, large terrace, private parking and garden. Ideal for large families or investors seeking high rental returns.</div>
-
+        <div class="modal-title">Luxury Villa — Station Road</div>
+        <div class="modal-desc">A premium 4 BHK villa with modern fittings, terrace, parking, and garden.</div>
         <div class="details-grid">
-          <div class="details-item"><strong>4 BHK</strong><span style="font-size:0.88rem;color:#556077">Bedrooms</span></div>
-          <div class="details-item"><strong>3 Baths</strong><span style="font-size:0.88rem;color:#556077">Bathrooms</span></div>
-          <div class="details-item"><strong>1 Kitchen</strong><span style="font-size:0.88rem;color:#556077">Kitchen</span></div>
-          <div class="details-item"><strong>2800 sqft</strong><span style="font-size:0.88rem;color:#556077">Area</span></div>
-          <div class="details-item"><strong>₹85 L</strong><span style="font-size:0.88rem;color:#556077">Price</span></div>
-          <div class="details-item"><strong>Station Road</strong><span style="font-size:0.88rem;color:#556077">Location</span></div>
+          <div class="details-item"><strong>4 BHK</strong><span>Bedrooms</span></div>
+          <div class="details-item"><strong>3 Baths</strong><span>Bathrooms</span></div>
+          <div class="details-item"><strong>2800 sqft</strong><span>Area</span></div>
+          <div class="details-item"><strong>₹85 L</strong><span>Price</span></div>
         </div>
-
-        <div class="map-wrap" aria-hidden="false">
-          <iframe width="100%" height="100%" frameborder="0" style="border:0" loading="lazy"
-            src="https://www.google.com/maps?q=Station+Road+Madhubani&output=embed" title="Station Road map"></iframe>
-        </div>
+        <div class="map-wrap"><iframe width="100%" height="100%" frameborder="0" src="https://www.google.com/maps?q=Station+Road+Madhubani&output=embed"></iframe></div>
       </div>
     </div>
   </div>
 
-  <div class="modal-backdrop" id="modal-2" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal2-title">
-      <button class="modal-close" aria-label="Close modal">&times;</button>
-      <div class="modal-media"><img src="https://i.ibb.co/chw00BZ1/residential-apartment-in-patna.jpg" alt="Modern Apartment — Town Area"></div>
+  <div class="modal-backdrop" id="modal-2">
+    <div class="modal">
+      <div class="modal-close">&times;</div>
+      <div class="modal-media"><img src="https://i.ibb.co/chw00BZ1/residential-apartment-in-patna.jpg" alt="Modern Apartment"></div>
       <div class="modal-body">
-        <div class="modal-title" id="modal2-title">Modern Apartment — Town Area</div>
-        <div class="modal-desc">A modern 3 BHK apartment located near markets and schools. Good natural light, secure building, covered parking.</div>
-
+        <div class="modal-title">Modern Apartment — Town Area</div>
+        <div class="modal-desc">A modern 3 BHK apartment located near markets and schools, secure and bright.</div>
         <div class="details-grid">
-          <div class="details-item"><strong>3 BHK</strong><span style="font-size:0.88rem;color:#556077">Bedrooms</span></div>
-          <div class="details-item"><strong>2 Baths</strong><span style="font-size:0.88rem;color:#556077">Bathrooms</span></div>
-          <div class="details-item"><strong>1 Kitchen</strong><span style="font-size:0.88rem;color:#556077">Kitchen</span></div>
-          <div class="details-item"><strong>1800 sqft</strong><span style="font-size:0.88rem;color:#556077">Area</span></div>
-          <div class="details-item"><strong>₹55 L</strong><span style="font-size:0.88rem;color:#556077">Price</span></div>
-          <div class="details-item"><strong>Town Area</strong><span style="font-size:0.88rem;color:#556077">Location</span></div>
+          <div class="details-item"><strong>3 BHK</strong><span>Bedrooms</span></div>
+          <div class="details-item"><strong>2 Baths</strong><span>Bathrooms</span></div>
+          <div class="details-item"><strong>1800 sqft</strong><span>Area</span></div>
+          <div class="details-item"><strong>₹55 L</strong><span>Price</span></div>
         </div>
-
-        <div class="map-wrap">
-          <iframe width="100%" height="100%" frameborder="0" style="border:0" loading="lazy"
-            src="https://www.google.com/maps?q=Town+Area+Madhubani&output=embed" title="Town Area map"></iframe>
-        </div>
+        <div class="map-wrap"><iframe width="100%" height="100%" frameborder="0" src="https://www.google.com/maps?q=Town+Area+Madhubani&output=embed"></iframe></div>
       </div>
     </div>
   </div>
 
-  <div class="modal-backdrop" id="modal-3" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal3-title">
-      <button class="modal-close" aria-label="Close modal">&times;</button>
-      <div class="modal-media"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80" alt="Cozy Family Home — Bela Road"></div>
+  <div class="modal-backdrop" id="modal-3">
+    <div class="modal">
+      <div class="modal-close">&times;</div>
+      <div class="modal-media"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80" alt="Cozy Home"></div>
       <div class="modal-body">
-        <div class="modal-title" id="modal3-title">Cozy Family Home — Bela Road</div>
-        <div class="modal-desc">Comfortable 2 BHK with a small garden and easy access to local transport. Perfect starter home or rental property.</div>
-
+        <div class="modal-title">Cozy Family Home — Bela Road</div>
+        <div class="modal-desc">Comfortable 2 BHK with small garden and easy access to transport.</div>
         <div class="details-grid">
-          <div class="details-item"><strong>2 BHK</strong><span style="font-size:0.88rem;color:#556077">Bedrooms</span></div>
-          <div class="details-item"><strong>1 Bath</strong><span style="font-size:0.88rem;color:#556077">Bathrooms</span></div>
-          <div class="details-item"><strong>1 Kitchen</strong><span style="font-size:0.88rem;color:#556077">Kitchen</span></div>
-          <div class="details-item"><strong>1200 sqft</strong><span style="font-size:0.88rem;color:#556077">Area</span></div>
-          <div class="details-item"><strong>₹35 L</strong><span style="font-size:0.88rem;color:#556077">Price</span></div>
-          <div class="details-item"><strong>Bela Road</strong><span style="font-size:0.88rem;color:#556077">Location</span></div>
+          <div class="details-item"><strong>2 BHK</strong><span>Bedrooms</span></div>
+          <div class="details-item"><strong>1 Bath</strong><span>Bathrooms</span></div>
+          <div class="details-item"><strong>1200 sqft</strong><span>Area</span></div>
+          <div class="details-item"><strong>₹35 L</strong><span>Price</span></div>
         </div>
-
-        <div class="map-wrap">
-          <iframe width="100%" height="100%" frameborder="0" style="border:0" loading="lazy"
-            src="https://www.google.com/maps?q=Bela+Road+Madhubani&output=embed" title="Bela Road map"></iframe>
-        </div>
+        <div class="map-wrap"><iframe width="100%" height="100%" frameborder="0" src="https://www.google.com/maps?q=Bela+Road+Madhubani&output=embed"></iframe></div>
       </div>
     </div>
   </div>
 
   <script>
-    /* MODAL + NAV BEHAVIOR (no header here) */
-    (function(){
-      const triggers = document.querySelectorAll('.view-more');
-      const backdrops = document.querySelectorAll('.modal-backdrop');
-
-      function openModal(id){
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.style.display = 'flex';
-        el.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-        const closeBtn = el.querySelector('.modal-close');
-        if (closeBtn) closeBtn.focus();
-      }
-
-      function closeModal(el){
-        if (!el) return;
-        el.style.display = 'none';
-        el.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
-      }
-
-      triggers.forEach(t => {
-        t.addEventListener('click', (e)=>{
-          e.preventDefault();
-          const id = t.getAttribute('data-modal');
-          if (id) openModal(id);
-        });
+    // Modal logic
+    document.querySelectorAll('.view-more').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const id=btn.getAttribute('data-modal');
+        const modal=document.getElementById(id);
+        if(modal){modal.style.display='flex';document.body.style.overflow='hidden';}
       });
-
-      backdrops.forEach(b => {
-        b.addEventListener('click', (e) => {
-          if (e.target === b) closeModal(b);
-        });
-        const close = b.querySelector('.modal-close');
-        if (close) close.addEventListener('click', ()=> closeModal(b));
+    });
+    document.querySelectorAll('.modal-backdrop').forEach(bg=>{
+      bg.addEventListener('click',e=>{
+        if(e.target===bg){bg.style.display='none';document.body.style.overflow='';}
       });
-
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          backdrops.forEach(b => {
-            if (b.style.display === 'flex') closeModal(b);
-          });
-        }
+      bg.querySelector('.modal-close').addEventListener('click',()=>{
+        bg.style.display='none';document.body.style.overflow='';
       });
-    })();
+    });
 
-    /* WhatsApp Dynamic Message Script (same as index.html) */
-    (function() {
-      const waButtons = document.querySelectorAll('.whatsapp-contact');
-
-      function makeWhatsAppLink(phone, message) {
-        const normalized = String(phone).replace(/[^0-9]/g, '');
-        const text = encodeURIComponent(message);
-        return `https://wa.me/${normalized}?text=${text}`;
-      }
-
-      waButtons.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.preventDefault();
-
-          const card = btn.closest('.card');
-          const propName = card?.getAttribute('data-prop-name') || 'this property';
-          const phone = btn.getAttribute('data-phone') || '918102253186';
-          const message = `I'm interested in "${propName}"`;
-
-          const waLink = makeWhatsAppLink(phone, message);
-          window.open(waLink, '_blank');
-        });
+    // WhatsApp button logic
+    document.querySelectorAll('.whatsapp-contact').forEach(btn=>{
+      btn.addEventListener('click',e=>{
+        e.preventDefault();
+        const card=btn.closest('.card');
+        const propName=card?.getAttribute('data-prop-name')||'this property';
+        const phone=btn.getAttribute('data-phone')||'918102253186';
+        const msg=encodeURIComponent(`I'm interested in "${propName}"`);
+        window.open(`https://wa.me/${phone}?text=${msg}`,'_blank');
       });
-    })();
+    });
   </script>
 </body>
 </html>
