@@ -5,30 +5,31 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Madhubani Realty — Custom Website</title>
   <style>
+    /* RESET */
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
     body{
       font-family:Inter, Poppins, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-      background:#f7fafc;
-      color:#0f172a;
+      background:#f7fafc;color:#0f172a;line-height:1.45;
+      -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
     }
     a{color:inherit;text-decoration:none}
     img{display:block;max-width:100%}
 
-    /* header + nav */
+    /* HEADER */
     .site-header{
       position:sticky;top:0;z-index:1200;
       background:#0b1220;color:#fff;
       display:flex;align-items:center;justify-content:space-between;
-      padding:14px 6%;gap:16px;
+      padding:12px 6%;gap:12px;
       box-shadow:0 6px 20px rgba(2,6,23,0.12)
     }
-    .brand {display:flex;align-items:center;gap:12px;}
-    .brand img{width:42px;height:42px;border-radius:10px;background:#fff;padding:6px}
-    .brand h1{font-size:1.15rem;font-weight:800;letter-spacing:0.2px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand img{width:40px;height:40px;border-radius:8px;background:#fff;padding:6px;object-fit:cover}
+    .brand h1{font-size:1.05rem;font-weight:800;letter-spacing:0.2px}
     nav{display:flex;align-items:center;gap:18px}
-    nav ul{list-style:none;display:flex;gap:18px;align-items:center}
-    nav ul li a{color:#fff;font-weight:600;padding:8px 6px;border-radius:8px;display:block}
+    nav ul{list-style:none;display:flex;gap:14px;align-items:center}
+    nav ul li a{color:#fff;font-weight:600;padding:8px 10px;border-radius:8px;display:block}
     nav ul li a:hover{background:rgba(255,255,255,0.06)}
 
     /* hamburger */
@@ -39,63 +40,88 @@
     .hamburger.open span:nth-child(3){transform:translateY(-8px) rotate(-45deg)}
 
     @media(max-width:880px){
-      nav ul{position:fixed;top:70px;right:16px;background:#0f172a;flex-direction:column;padding:14px;border-radius:10px;box-shadow:0 12px 30px rgba(2,6,23,0.28);display:none;min-width:220px}
+      nav ul{position:fixed;top:64px;right:16px;background:#0f172a;flex-direction:column;padding:12px;border-radius:10px;box-shadow:0 12px 30px rgba(2,6,23,0.28);display:none;min-width:220px}
       nav ul.active{display:flex}
       .hamburger{display:flex}
     }
 
-    /* intro header - tightened spacing exactly */
+    /* HERO / INTRO (reduced spacing) */
     .intro{
       background:linear-gradient(180deg,#0b1220,#0f1a2b);
       color:#e6eefc;
-      padding:30px 6% 20px; /* tightened above & below */
+      padding:40px 6% 28px;
       text-align:center;
     }
-    .intro h2{font-size:2.2rem;line-height:1.02;margin-bottom:12px;font-weight:800}
-    .intro p{max-width:880px;margin:0 auto;color:#cfe0ff;font-size:1rem;line-height:1.6}
+    .intro .wrap{max-width:960px;margin:0 auto}
+    .intro h2{font-size:1.9rem;line-height:1.04;margin-bottom:10px;font-weight:800}
+    .intro p{max-width:880px;margin:0 auto;color:#cfe0ff;font-size:0.98rem;line-height:1.6}
 
-    /* main */
-    main{max-width:1200px;margin:0 auto;padding:36px 6%}
-    section{margin:48px 0}
-    .section-title{font-size:1.9rem;color:#0b1220;text-align:center;margin-bottom:28px;font-weight:800}
-    .grid{display:grid;gap:20px}
-    .grid-3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-    .card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(2,6,23,0.06);transition:transform .22s;display:flex;flex-direction:column;height:460px}
-    .card:hover{transform:translateY(-8px)}
-    .card .media{height:220px;overflow:hidden}
+    /* MAIN LAYOUT */
+    main{max-width:1200px;margin:0 auto;padding:20px 6% 36px}
+    section{margin:32px 0}
+    .section-title{font-size:1.6rem;color:#0b1220;text-align:center;margin-bottom:18px;font-weight:800}
+
+    /* GRID + CARDS */
+    .grid{display:grid;gap:16px}
+    .grid-3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+    .card{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 8px 26px rgba(2,6,23,0.06);transition:transform .16s}
+    .card:hover{transform:translateY(-6px)}
+    .card .media{height:200px;overflow:hidden}
     .card .media img{width:100%;height:100%;object-fit:cover;display:block}
-    .card .body{padding:18px;text-align:center;overflow-y:auto}
-    .card h4{font-size:1.08rem;color:#06283d;margin-bottom:8px;font-weight:700}
-    .meta{color:#556077;font-size:0.95rem;margin-bottom:10px}
-    .cta{display:inline-block;margin-top:12px;background:#06283d;color:#fff;padding:10px 18px;border-radius:999px;font-weight:700}
-    .view-all{text-align:center;margin-top:20px}
-    .view-all a{background:#06283d;color:#fff;padding:12px 26px;border-radius:999px;font-weight:700;display:inline-block}
+    .card .body{padding:14px;text-align:left}
+    .card h4{font-size:1rem;color:#06283d;margin-bottom:8px;font-weight:700}
+    .meta{color:#556077;font-size:0.92rem;margin-bottom:10px}
+    .card-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px}
+    .cta{display:inline-block;background:#06283d;color:#fff;padding:10px 14px;border-radius:999px;font-weight:700;font-size:0.92rem}
 
-    /* other sections unchanged visually (keep your original aesthetics) */
+    /* View All button */
+    .center-row{display:flex;justify-content:center;margin-top:16px}
+    .btn-outline{background:transparent;border:2px solid #06283d;color:#06283d;padding:8px 14px;border-radius:999px;font-weight:700}
 
-    footer{background:#0b1220;color:#fff;padding:26px 6%;text-align:center;border-top-left-radius:10px;border-top-right-radius:10px;margin-top:36px}
+    /* focus/services/why/etc */
+    .focus-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:stretch}
+    .focus-card{background:#fff;padding:18px;border-radius:10px;text-align:center;box-shadow:0 8px 22px rgba(2,6,23,0.04)}
+    .services-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+    .service-card{background:#fff;padding:16px;border-radius:10px;box-shadow:0 8px 22px rgba(2,6,23,0.04);text-align:center}
+    .why-list{max-width:900px;margin:0 auto;list-style:none;padding:0}
+    .why-list li{padding:12px 0;border-bottom:1px solid #eef3f8;color:#475569;font-size:1rem}
+    .why-list li:last-child{border-bottom:none}
+
+    /* testimonials/agents */
+    .test-card{background:#fff;padding:16px;border-radius:10px;box-shadow:0 8px 20px rgba(2,6,23,0.05);margin-bottom:12px}
+    .agent{background:#fff;padding:14px;border-radius:10px;text-align:center;box-shadow:0 8px 20px rgba(2,6,23,0.05)}
+    .agent img{width:90px;height:90px;border-radius:50%;object-fit:cover;margin:0 auto 10px}
+
+    /* about + footer */
+    .about p{max-width:900px;margin:0 auto;color:#475569;line-height:1.6}
+    footer{background:#0b1220;color:#fff;padding:20px 6%;text-align:center;border-top-left-radius:10px;border-top-right-radius:10px;margin-top:28px}
 
     /* whatsapp */
     .whatsapp-float{position:fixed;right:18px;bottom:18px;z-index:1400;width:62px;height:62px;border-radius:999px;background:#25d366;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(2,6,23,0.18)}
     .whatsapp-float svg{width:30px;height:30px;fill:#fff}
 
-    /* modal (scrollable) */
-    .modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:2000;padding:20px}
-    .modal.active{display:flex}
-    .modal-content{background:#fff;border-radius:14px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;animation:pop .25s ease}
-    @keyframes pop{from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}
-    .modal-header img{width:100%;height:280px;object-fit:cover}
-    .modal-body{padding:20px}
-    .modal-body h2{color:#06283d;margin-bottom:6px}
-    .modal-body .meta{color:#475569;margin-bottom:12px}
-    .details-list{margin-bottom:20px;color:#334155;font-size:0.95rem}
-    .details-list li{margin-bottom:6px;list-style:disc;margin-left:18px}
-    .modal-body p{color:#334155;line-height:1.6;margin-bottom:20px}
-    iframe{width:100%;height:260px;border:0;border-radius:10px;margin-bottom:20px}
-    .modal-actions{display:flex;justify-content:space-between;align-items:center}
-    .btn{padding:10px 18px;border-radius:999px;font-weight:700;text-align:center;cursor:pointer}
-    .btn.whatsapp{background:#25d366;color:#fff}
-    .btn.close{background:#e2e8f0;color:#0f172a}
+    /* MODAL */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:1500}
+    .modal{background:#fff;border-radius:12px;max-width:900px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 18px 60px rgba(2,6,23,0.3)}
+    .modal .modal-media{height:260px;overflow:hidden;border-top-left-radius:12px;border-top-right-radius:12px}
+    .modal .modal-media img{width:100%;height:100%;object-fit:cover;display:block}
+    .modal .modal-body{padding:18px}
+    .modal .modal-title{font-size:1.15rem;font-weight:800;margin-bottom:8px;color:#06283d}
+    .modal .modal-desc{color:#475569;margin-bottom:12px}
+    .details-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+    .details-item{background:#f7fafc;padding:10px;border-radius:8px;text-align:center}
+    .details-item strong{display:block;color:#06283d;font-size:1rem}
+    .map-wrap{width:100%;height:240px;border-radius:8px;overflow:hidden;border:1px solid #e6eefc}
+    .modal-close{position:absolute;right:18px;top:12px;background:#fff;border-radius:999px;padding:6px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(2,6,23,0.12);cursor:pointer}
+
+    /* smaller screens modal tweaks */
+    @media (max-width:700px){
+      .modal .modal-media{height:180px}
+      .details-grid{grid-template-columns:repeat(2,1fr)}
+    }
+
+    /* utility */
+    .hidden{display:none}
   </style>
 </head>
 <body>
@@ -108,6 +134,7 @@
 
     <nav>
       <ul id="mainNav">
+        <!-- Properties now links to /properties -->
         <li><a href="/properties" class="nav-link">Properties</a></li>
         <li><a href="#focus" class="nav-link">Our Focus</a></li>
         <li><a href="#services" class="nav-link">Services</a></li>
@@ -118,14 +145,13 @@
       </ul>
     </nav>
 
-    <!-- this is the hamburger button. It now toggles with JS below -->
     <div class="hamburger" id="hamburger" aria-label="Toggle menu" role="button" tabindex="0">
       <span></span><span></span><span></span>
     </div>
   </header>
 
   <section class="intro" id="home">
-    <div style="max-width:1100px;margin:0 auto">
+    <div class="wrap">
       <h2>Welcome to Madhubani Realty</h2>
       <p>We bring local property businesses online with clean, fast, custom-coded websites that actually get results. List your homes, show photos, and get direct WhatsApp leads — no tech stress for you.</p>
     </div>
@@ -134,46 +160,59 @@
   <main>
     <section id="listings">
       <h2 class="section-title">Featured Properties</h2>
-      <div class="grid grid-3">
-        <div class="card" data-prop="Luxury Villa — Station Road">
+
+      <div class="grid grid-3" role="list">
+        <!-- Property 1 -->
+        <div class="card" role="listitem">
           <div class="media"><img src="https://i.ibb.co/Fbnkr2gn/images-3.jpg" alt="Luxury Villa"></div>
           <div class="body">
             <h4>Luxury Villa — Station Road</h4>
             <div class="meta">₹85 L • 4 BHK • 2800 sq ft • Station Road</div>
-            <a class="cta" href="https://wa.me/918102253186?text=I%20want%20Luxury%20Villa%20%E2%80%94%20Station%20Road">Contact Now</a>
-            <a href="#" class="cta view-btn">View Details</a>
+            <div class="card-footer">
+              <a class="cta view-more" href="#!" data-modal="modal-1">View More</a>
+              <span style="color:#556077;font-size:0.9rem">Station Road</span>
+            </div>
           </div>
         </div>
-        <div class="card" data-prop="Modern Apartment — Town Area">
+
+        <!-- Property 2 -->
+        <div class="card" role="listitem">
           <div class="media"><img src="https://i.ibb.co/chw00BZ1/residential-apartment-in-patna.jpg" alt="Modern Apartment"></div>
           <div class="body">
             <h4>Modern Apartment — Town Area</h4>
             <div class="meta">₹55 L • 3 BHK • 1800 sq ft</div>
-            <a class="cta" href="https://wa.me/918102253186?text=I%20want%20Modern%20Apartment%20%E2%80%94%20Town%20Area">Contact Now</a>
-            <a href="#" class="cta view-btn">View Details</a>
+            <div class="card-footer">
+              <a class="cta view-more" href="#!" data-modal="modal-2">View More</a>
+              <span style="color:#556077;font-size:0.9rem">Town Area</span>
+            </div>
           </div>
         </div>
-        <div class="card" data-prop="Cozy Family Home — Bela Road">
+
+        <!-- Property 3 -->
+        <div class="card" role="listitem">
           <div class="media"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80" alt="Cozy Home"></div>
           <div class="body">
             <h4>Cozy Family Home — Bela Road</h4>
             <div class="meta">₹35 L • 2 BHK • 1200 sq ft</div>
-            <a class="cta" href="https://wa.me/918102253186?text=I%20want%20Cozy%20Family%20Home%20%E2%80%94%20Bela%20Road">Contact Now</a>
-            <a href="#" class="cta view-btn">View Details</a>
+            <div class="card-footer">
+              <a class="cta view-more" href="#!" data-modal="modal-3">View More</a>
+              <span style="color:#556077;font-size:0.9rem">Bela Road</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="view-all"><a href="/properties">View All Properties</a></div>
+      <div class="center-row">
+        <a class="btn-outline" href="/properties">View All Properties</a>
+      </div>
     </section>
 
-    <!-- Rest of the original sections preserved exactly -->
     <section id="focus">
       <h2 class="section-title">Our Main Focus</h2>
       <div class="focus-grid">
-        <div class="focus-card"><img src="https://cdn-icons-png.flaticon.com/512/992/992700.png" alt="satisfaction"><h4>Customer Satisfaction</h4></div>
-        <div class="focus-card"><img src="https://cdn-icons-png.flaticon.com/512/1048/1048953.png" alt="infrastructure"><h4>Quality Infrastructure</h4></div>
-        <div class="focus-card"><img src="https://cdn-icons-png.flaticon.com/512/1170/1170576.png" alt="delivery"><h4>On Time Delivery</h4></div>
+        <div class="focus-card"><img src="https://cdn-icons-png.flaticon.com/512/992/992700.png" alt="satisfaction" width="56" height="56"><h4>Customer Satisfaction</h4></div>
+        <div class="focus-card"><img src="https://cdn-icons-png.flaticon.com/512/1048/1048953.png" alt="infrastructure" width="56" height="56"><h4>Quality Infrastructure</h4></div>
+        <div class="focus-card"><img src="https://cdn-icons-png.flaticon.com/512/1170/1170576.png" alt="delivery" width="56" height="56"><h4>On Time Delivery</h4></div>
       </div>
     </section>
 
@@ -208,10 +247,10 @@
 
     <section id="agents">
       <h2 class="section-title">Meet Our Agents</h2>
-      <div class="agents-grid">
-        <div class="agent"><img src="https://i.ibb.co/LdFdx8p4/Screenshot-20251009-104658-Instagram.jpg" alt="Ravi"><h4>Ravi Kumar</h4><p style="color:#556077">Property Expert — 10 years experience</p><a class="cta" href="https://wa.me/918102253186">Contact Now</a></div>
-        <div class="agent"><img src="https://i.ibb.co/HfkWtJHV/images-4.jpg" alt="Priya"><h4>Priya Singh</h4><p style="color:#556077">Commercial & Residential Specialist</p><a class="cta" href="https://wa.me/918102253186">Contact Now</a></div>
-        <div class="agent"><img src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=400&q=80" alt="Arun"><h4>Arun Patel</h4><p style="color:#556077">Luxury Property Consultant</p><a class="cta" href="https://wa.me/918102253186">Contact Now</a></div>
+      <div class="agents-grid" style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+        <div class="agent"><img src="https://i.ibb.co/LdFdx8p4/Screenshot-20251009-104658-Instagram.jpg" alt="Ravi"><h4>Ravi Kumar</h4><p style="color:#556077">Property Expert — 10 years experience</p><a class="cta" href="https://wa.me/8102253186">Contact Now</a></div>
+        <div class="agent"><img src="https://i.ibb.co/HfkWtJHV/images-4.jpg" alt="Priya"><h4>Priya Singh</h4><p style="color:#556077">Commercial & Residential Specialist</p><a class="cta" href="https://wa.me/8102253186">Contact Now</a></div>
+        <div class="agent"><img src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=400&q=80" alt="Arun"><h4>Arun Patel</h4><p style="color:#556077">Luxury Property Consultant</p><a class="cta" href="https://wa.me/8102253186">Contact Now</a></div>
       </div>
     </section>
 
@@ -223,67 +262,107 @@
 
   <footer>© 2025 Madhubani Realty · Custom-coded demo. All rights reserved.</footer>
 
-  <a class="whatsapp-float" href="https://wa.me/918102253186" target="_blank" aria-label="Chat on WhatsApp">
+  <a class="whatsapp-float" href="https://wa.me/8102253186" target="_blank" aria-label="Chat on WhatsApp">
     <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <path d="M16.04 2C8.54 2 2.5 8.04 2.5 15.54c0 2.73.72 5.33 2.1 7.64L2 30l7.02-2.18c2.19 1.2 4.68 1.83 7.02 1.83 7.5 0 13.54-6.04 13.54-13.54S23.54 2 16.04 2zm6.93 16.04c-.37-.18-2.18-1.08-2.52-1.2-.34-.13-.59-.18-.84.18s-.96 1.2-1.18 1.44-.44.27-.81.09c-.37-.18-1.56-.58-2.97-1.86-1.1-.98-1.84-2.18-2.06-2.55-.22-.37-.02-.57.16-.75.16-.16.37-.44.56-.66.18-.22.25-.37.37-.62.12-.25.06-.46-.03-.65-.09-.18-.84-2.01-1.15-2.76-.3-.72-.61-.63-.84-.64h-.72c-.25 0-.65.09-.99.46s-1.3 1.27-1.3 3.1C8.06 18.6 10.68 21 13 22.2c2.85 1.42 4.9 1.4 5.35 1.38.75-.04 2.18-.71 2.49-1.57.31-.86.31-1.6.22-1.75-.09-.15-.34-.25-.72-.42z"/>
     </svg>
   </a>
 
-  <!-- Modal (scrollable) -->
-  <div class="modal" id="propertyModal" aria-hidden="true">
-    <div class="modal-content" role="dialog" aria-modal="true">
-      <div class="modal-header"><img id="modalImg" src="" alt="Property image"></div>
+  <!-- ===== MODALS (3 unique modals for the 3 featured properties) ===== -->
+  <div class="modal-backdrop" id="modal-1" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal1-title">
+      <button class="modal-close" aria-label="Close modal">&times;</button>
+      <div class="modal-media"><img src="https://i.ibb.co/Fbnkr2gn/images-3.jpg" alt="Luxury Villa — Station Road"></div>
       <div class="modal-body">
-        <h2 id="modalTitle"></h2>
-        <div class="meta" id="modalMeta"></div>
-        <ul class="details-list" id="modalDetails"></ul>
-        <p id="modalDesc"></p>
-        <iframe id="modalMap" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3670.14006287345!2d86.0882!3d26.3467!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39ecf54d2d8fcb7d%3A0x8d87b7b03f06f7b4!2sMadhubani%2C%20Bihar!5e0!3m2!1sen!2sin!4v1700000000000" title="Property location"></iframe>
-        <div class="modal-actions">
-          <a href="#" id="whatsappBtn" target="_blank" class="btn whatsapp">Contact on WhatsApp</a>
-          <div class="btn close" id="closeModal">Close</div>
+        <div class="modal-title" id="modal1-title">Luxury Villa — Station Road</div>
+        <div class="modal-desc">A premium 4 BHK villa with modern fittings, large terrace, private parking and garden. Ideal for large families or investors seeking high rental returns.</div>
+
+        <div class="details-grid">
+          <div class="details-item"><strong>4 BHK</strong><span style="font-size:0.88rem;color:#556077">Bedrooms</span></div>
+          <div class="details-item"><strong>3 Baths</strong><span style="font-size:0.88rem;color:#556077">Bathrooms</span></div>
+          <div class="details-item"><strong>1 Kitchen</strong><span style="font-size:0.88rem;color:#556077">Kitchen</span></div>
+          <div class="details-item"><strong>2800 sqft</strong><span style="font-size:0.88rem;color:#556077">Area</span></div>
+          <div class="details-item"><strong>₹85 L</strong><span style="font-size:0.88rem;color:#556077">Price</span></div>
+          <div class="details-item"><strong>Station Road</strong><span style="font-size:0.88rem;color:#556077">Location</span></div>
+        </div>
+
+        <div class="map-wrap" aria-hidden="false">
+          <!-- Simple Google Maps embed via query (replace query if you have exact coords/embed) -->
+          <iframe width="100%" height="100%" frameborder="0" style="border:0" loading="lazy"
+            src="https://www.google.com/maps?q=Station+Road+Madhubani&output=embed" title="Station Road map"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-2" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal2-title">
+      <button class="modal-close" aria-label="Close modal">&times;</button>
+      <div class="modal-media"><img src="https://i.ibb.co/chw00BZ1/residential-apartment-in-patna.jpg" alt="Modern Apartment — Town Area"></div>
+      <div class="modal-body">
+        <div class="modal-title" id="modal2-title">Modern Apartment — Town Area</div>
+        <div class="modal-desc">A modern 3 BHK apartment located near markets and schools. Good natural light, secure building, covered parking.</div>
+
+        <div class="details-grid">
+          <div class="details-item"><strong>3 BHK</strong><span style="font-size:0.88rem;color:#556077">Bedrooms</span></div>
+          <div class="details-item"><strong>2 Baths</strong><span style="font-size:0.88rem;color:#556077">Bathrooms</span></div>
+          <div class="details-item"><strong>1 Kitchen</strong><span style="font-size:0.88rem;color:#556077">Kitchen</span></div>
+          <div class="details-item"><strong>1800 sqft</strong><span style="font-size:0.88rem;color:#556077">Area</span></div>
+          <div class="details-item"><strong>₹55 L</strong><span style="font-size:0.88rem;color:#556077">Price</span></div>
+          <div class="details-item"><strong>Town Area</strong><span style="font-size:0.88rem;color:#556077">Location</span></div>
+        </div>
+
+        <div class="map-wrap">
+          <iframe width="100%" height="100%" frameborder="0" style="border:0" loading="lazy"
+            src="https://www.google.com/maps?q=Town+Area+Madhubani&output=embed" title="Town Area map"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modal-3" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal3-title">
+      <button class="modal-close" aria-label="Close modal">&times;</button>
+      <div class="modal-media"><img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80" alt="Cozy Family Home — Bela Road"></div>
+      <div class="modal-body">
+        <div class="modal-title" id="modal3-title">Cozy Family Home — Bela Road</div>
+        <div class="modal-desc">Comfortable 2 BHK with a small garden and easy access to local transport. Perfect starter home or rental property.</div>
+
+        <div class="details-grid">
+          <div class="details-item"><strong>2 BHK</strong><span style="font-size:0.88rem;color:#556077">Bedrooms</span></div>
+          <div class="details-item"><strong>1 Bath</strong><span style="font-size:0.88rem;color:#556077">Bathrooms</span></div>
+          <div class="details-item"><strong>1 Kitchen</strong><span style="font-size:0.88rem;color:#556077">Kitchen</span></div>
+          <div class="details-item"><strong>1200 sqft</strong><span style="font-size:0.88rem;color:#556077">Area</span></div>
+          <div class="details-item"><strong>₹35 L</strong><span style="font-size:0.88rem;color:#556077">Price</span></div>
+          <div class="details-item"><strong>Bela Road</strong><span style="font-size:0.88rem;color:#556077">Location</span></div>
+        </div>
+
+        <div class="map-wrap">
+          <iframe width="100%" height="100%" frameborder="0" style="border:0" loading="lazy"
+            src="https://www.google.com/maps?q=Bela+Road+Madhubani&output=embed" title="Bela Road map"></iframe>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Robust hamburger toggle + auto-close behavior (unchanged)
+    /* NAV + HAMBURGER + AUTO-CLOSE */
     (function(){
       const hamburger = document.getElementById('hamburger');
       const mainNav = document.getElementById('mainNav');
-
       if (!hamburger || !mainNav) return;
 
-      function toggleNav(open) {
-        if (open === undefined) {
-          mainNav.classList.toggle('active');
-          hamburger.classList.toggle('open');
-        } else if (open) {
-          mainNav.classList.add('active');
-          hamburger.classList.add('open');
-        } else {
-          mainNav.classList.remove('active');
-          hamburger.classList.remove('open');
-        }
+      function toggleNav(open){
+        if (open === undefined) mainNav.classList.toggle('active'), hamburger.classList.toggle('open');
+        else if (open) mainNav.classList.add('active'), hamburger.classList.add('open');
+        else mainNav.classList.remove('active'), hamburger.classList.remove('open');
       }
 
-      hamburger.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleNav();
-      });
+      hamburger.addEventListener('click', (e)=>{ e.stopPropagation(); toggleNav(); });
+      hamburger.addEventListener('keydown', (e)=>{ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleNav(); } });
 
-      hamburger.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          toggleNav();
-        }
-      });
-
-      document.querySelectorAll('#mainNav a').forEach(a => {
-        a.addEventListener('click', () => {
-          if (mainNav.classList.contains('active')) toggleNav(false);
-        });
+      document.querySelectorAll('#mainNav a').forEach(a=>{
+        a.addEventListener('click', () => { if (mainNav.classList.contains('active')) toggleNav(false); });
       });
 
       document.addEventListener('click', (e) => {
@@ -296,85 +375,64 @@
       });
 
       const observer = new MutationObserver(() => {
-        if (mainNav.classList.contains('active')) {
-          document.body.style.overflow = 'hidden';
-        } else {
-          document.body.style.overflow = '';
-        }
+        if (mainNav.classList.contains('active')) document.body.style.overflow = 'hidden';
+        else document.body.style.overflow = '';
       });
       observer.observe(mainNav, { attributes: true, attributeFilter: ['class'] });
     })();
 
-    // Modal logic for Featured properties (index)
+    /* MODAL LOGIC: open specific modal, close on backdrop/outside/click X/Escape */
     (function(){
-      const modal = document.getElementById('propertyModal');
-      const modalImg = document.getElementById('modalImg');
-      const modalTitle = document.getElementById('modalTitle');
-      const modalMeta = document.getElementById('modalMeta');
-      const modalDetails = document.getElementById('modalDetails');
-      const modalDesc = document.getElementById('modalDesc');
-      const whatsappBtn = document.getElementById('whatsappBtn');
-      const closeModal = document.getElementById('closeModal');
+      const triggers = document.querySelectorAll('.view-more');
+      const backdrops = document.querySelectorAll('.modal-backdrop');
 
-      const data = {
-        'Luxury Villa — Station Road': {
-          img: 'https://i.ibb.co/Fbnkr2gn/images-3.jpg',
-          meta: '₹85 L • 4 BHK • 2800 sq ft • Station Road',
-          details: ['Bedrooms: 4','Kitchens: 2','Bathrooms: 3','Parking: Yes','Garden Area: 200 sq ft'],
-          desc: 'This luxurious villa features a grand design with spacious rooms, premium finishes, and a private garden. Positioned near Station Road, it provides quick access to local markets and transit while maintaining a peaceful setting. The property includes modern fixtures, a large family lounge, multiple balconies and ample natural light. Ideal for a family looking for comfort, privacy and elegance.'
-        },
-        'Modern Apartment — Town Area': {
-          img: 'https://i.ibb.co/chw00BZ1/residential-apartment-in-patna.jpg',
-          meta: '₹55 L • 3 BHK • 1800 sq ft',
-          details: ['Bedrooms: 3','Kitchens: 1','Bathrooms: 2','Balcony: Yes'],
-          desc: 'A modern 3 BHK apartment in the heart of town, offering convenient living with nearby schools, shopping, and transport. The apartment is designed with a contemporary layout, efficient use of space, and good ventilation.'
-        },
-        'Cozy Family Home — Bela Road': {
-          img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80',
-          meta: '₹35 L • 2 BHK • 1200 sq ft',
-          details: ['Bedrooms: 2','Kitchens: 1','Bathrooms: 1','Parking: Street'],
-          desc: 'A cozy family home located on Bela Road with a compact and practical floor plan. Perfect for small families or first-time buyers.'
-        }
-      };
+      function openModal(id){
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = 'flex';
+        el.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        // focus trap - set focus to close button
+        const closeBtn = el.querySelector('.modal-close');
+        if (closeBtn) closeBtn.focus();
+      }
 
-      document.querySelectorAll('.view-btn').forEach(btn => {
-        btn.addEventListener('click', function(e){
+      function closeModal(el){
+        if (!el) return;
+        el.style.display = 'none';
+        el.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      }
+
+      triggers.forEach(t => {
+        t.addEventListener('click', (e)=>{
           e.preventDefault();
-          const card = this.closest('.card');
-          const key = card.getAttribute('data-prop');
-          const item = data[key];
-          if (!item) return;
-
-          modalImg.src = item.img;
-          modalTitle.textContent = key;
-          modalMeta.textContent = item.meta;
-
-          modalDetails.innerHTML = '';
-          item.details.forEach(d => {
-            const li = document.createElement('li');
-            li.textContent = d;
-            modalDetails.appendChild(li);
-          });
-
-          modalDesc.textContent = item.desc;
-          whatsappBtn.href = 'https://wa.me/918102253186?text=' + encodeURIComponent('I want ' + key);
-
-          modal.classList.add('active');
-          document.body.style.overflow = 'hidden';
-          modal.setAttribute('aria-hidden','false');
+          const id = t.getAttribute('data-modal');
+          if (id) openModal(id);
         });
       });
 
-      function closeHandler(){
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-        modal.setAttribute('aria-hidden','true');
-      }
+      backdrops.forEach(b => {
+        // close with clicking outside modal content
+        b.addEventListener('click', (e) => {
+          if (e.target === b) closeModal(b);
+        });
+        // close with close button
+        const close = b.querySelector('.modal-close');
+        if (close) close.addEventListener('click', ()=> closeModal(b));
+      });
 
-      closeModal.addEventListener('click', closeHandler);
-      modal.addEventListener('click', function(e){ if (e.target === modal) closeHandler(); });
-      document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && modal.classList.contains('active')) closeHandler(); });
+      // close with Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          backdrops.forEach(b => {
+            if (b.style.display === 'flex') closeModal(b);
+          });
+        }
+      });
     })();
+
+    /* OPTIONAL: prevent iframe heavy load until modal open (left as simple embed now) */
   </script>
 </body>
 </html>
