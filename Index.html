@@ -1,0 +1,2108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dental Booking Promo Video Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #050B12;
+      color: #F6FBFB;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      gap: 14px;
+    }
+    .canvas-wrap {
+      position: relative;
+      height: min(74vh, 780px);
+      aspect-ratio: 9 / 16;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      background: #07121F;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    button, .dl-link {
+      appearance: none;
+      border: none;
+      outline: none;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 15px;
+      padding: 11px 22px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    #previewBtn {
+      background: #0FB5AE;
+      color: #041E21;
+    }
+    #exportBtn {
+      background: #FF6B5E;
+      color: #FFFFFF;
+    }
+    .dl-link {
+      background: #1B3B56;
+      color: #F6FBFB;
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+    button:hover:not(:disabled), .dl-link:hover {
+      transform: translateY(-1px);
+    }
+    #statusText {
+      font-size: 14px;
+      font-weight: 500;
+      color: #9BB4C9;
+      min-height: 20px;
+      text-align: center;
+    }
+    #errorBox {
+      display: none;
+      max-width: 560px;
+      background: rgba(255, 107, 94, 0.14);
+      border: 1px solid #FF6B5E;
+      color: #FFD7D3;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      text-align: center;
+    }
+    #resultContainer {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    #resultVideo {
+      width: 180px;
+      aspect-ratio: 9 / 16;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="canvas-wrap">
+    <canvas id="stage" width="1080" height="1920"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="previewBtn" disabled>▶ Preview</button>
+    <button id="exportBtn" disabled>⬇ Export MP4</button>
+    <a id="downloadAgain" class="dl-link" style="display:none;" download="dental-booking-promo.mp4">⬇ Download again</a>
+  </div>
+
+  <div id="statusText">Loading fonts...</div>
+  <div id="errorBox"></div>
+
+  <div id="resultContainer">
+    <video id="resultVideo" controls playsinline muted></video>
+  </div>
+
+  <script type="module">
+    import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm";
+
+    // ============================================================================
+    // FILL-INS
+    // ============================================================================
+    const BRAND = "Ezsites";
+    const CONTACT = "+91 8102253186";
+    const CLINIC_DEMO = "Smile Care Dental Clinic";
+
+    // ============================================================================
+    // CONSTANTS & PALETTE
+    // ============================================================================
+    const W = 1080;
+    const H = 1920;
+    const FPS = 30;
+    const DURATION = 55;
+    const TOTAL_FRAMES = DURATION * FPS; // 1650 frames (0..1649)
+
+    const COLORS = {
+      teal: "#0FB5AE",
+      deepBlue: "#0B3C5D",
+      softWhite: "#F6FBFB",
+      coral: "#FF6B5E",
+      navy: "#07121F",
+      ink: "#091E32",
+      slate: "#627D98",
+      green: "#22C55E"
+    };
+
+    const canvas = document.getElementById("stage");
+    const ctx = canvas.getContext("2d");
+    const previewBtn = document.getElementById("previewBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const statusText = document.getElementById("statusText");
+    const errorBox = document.getElementById("errorBox");
+    const downloadAgain = document.getElementById("downloadAgain");
+    const resultContainer = document.getElementById("resultContainer");
+    const resultVideo = document.getElementById("resultVideo");
+
+    function showError(msg) {
+      errorBox.style.display = "block";
+      errorBox.textContent = msg;
+      console.error(msg);
+    }
+
+    // ============================================================================
+    // DETERMINISTIC SCENE STATE
+    // ============================================================================
+    const state = {
+      time: 0,
+      bg: {
+        c1: "#07121F",
+        c2: "#07121F",
+        lightGlow: 0
+      },
+      // Scene 1..3: Dark WhatsApp / Clock
+      s123: {
+        alpha: 1,
+        phoneY: 160,
+        phoneAlpha: 0,
+        phoneTilt: -5,
+        phoneDim: 0,
+        h1Alpha: 0, h1Y: 40,
+        h2Alpha: 0, h2Y: 40,
+        h3Alpha: 0, h3Y: 40,
+        msg1: 0, msg2: 0, msg3: 0, msg4: 0,
+        chip1: 0, chip2: 0, chip3: 0,
+        chatScroll: 0,
+        badgeAlpha: 0,
+        badgeScale: 0,
+        badgeCount: 3,
+        clockAlpha: 0,
+        clockScale: 0.85,
+        clockProgress: 0
+      },
+      // Scene 4..6: Light Phone Website & Booking & Reminder
+      s456: {
+        alpha: 0,
+        h4Alpha: 0, h4Y: 40,
+        h5Alpha: 0, h5Y: 40,
+        h6Alpha: 0, h6Y: 40,
+        phoneY: 220,
+        phoneAlpha: 0,
+        homeAlpha: 1,
+        card1: 0, card2: 0, card3: 0, card4: 0,
+        bookingAlpha: 0,
+        step1Select: 0,
+        step2Cal: 0,
+        step2DateSelect: 0,
+        step3Slots: 0,
+        step3SlotSelect: 0,
+        step4Form: 0,
+        step4Typing: 0,
+        step5Confirm: 0,
+        chip1: 0, chip2: 0, chip3: 0,
+        notifAlpha: 0,
+        notifY: -80,
+        bellAngle: 0,
+        chip6: 0
+      },
+      // Scene 7: Deep Blue Dentist Dashboard
+      s7: {
+        alpha: 0,
+        h7Alpha: 0, h7Y: 40,
+        laptopY: 120,
+        laptopAlpha: 0,
+        stat1: 0, stat2: 0, stat3: 0,
+        newBlockScale: 0,
+        statusConfirmed: 0,
+        chip1: 0, chip2: 0, chip3: 0, chip4: 0
+      },
+      // Scene 8: Checklist Package
+      s8: {
+        alpha: 0,
+        h8Alpha: 0, h8Y: 40,
+        item1: 0, item2: 0, item3: 0, item4: 0
+      },
+      // Scene 9: Final CTA
+      s9: {
+        alpha: 0,
+        brandAlpha: 0, brandY: 40,
+        h9Alpha: 0, h9Y: 40,
+        ctaAlpha: 0, ctaY: 40,
+        contactAlpha: 0, contactY: 40,
+        subAlpha: 0
+      }
+    };
+
+    // ============================================================================
+    // MASTER GSAP TIMELINE (EXACTLY 55s)
+    // ============================================================================
+    const tl = gsap.timeline({ paused: true });
+
+    function buildTimeline() {
+      tl.clear();
+      // Keep state.time synced with playhead
+      tl.to(state, { time: DURATION, duration: DURATION, ease: "none" }, 0);
+
+      // ---------------- SCENE 1 (0 - 6s) ----------------
+      tl.fromTo(state.s123, { h1Alpha: 0, h1Y: 40 }, { h1Alpha: 1, h1Y: 0, duration: 0.65, ease: "power3.out" }, 0.15);
+      tl.fromTo(state.s123, { phoneAlpha: 0, phoneY: 160, phoneTilt: -8 }, { phoneAlpha: 1, phoneY: 0, phoneTilt: -3.5, duration: 0.85, ease: "power3.out" }, 0.3);
+
+      tl.to(state.s123, { msg1: 1, duration: 0.45, ease: "back.out(1.5)" }, 0.9);
+      tl.to(state.s123, { msg2: 1, duration: 0.45, ease: "back.out(1.5)" }, 1.6);
+      tl.to(state.s123, { msg3: 1, duration: 0.45, ease: "back.out(1.5)" }, 2.3);
+      tl.to(state.s123, { msg4: 1, duration: 0.45, ease: "back.out(1.5)" }, 3.0);
+
+      tl.to(state.s123, { chip1: 1, duration: 0.5, ease: "back.out(1.6)" }, 1.2);
+      tl.to(state.s123, { chip2: 1, duration: 0.5, ease: "back.out(1.6)" }, 1.32);
+      tl.to(state.s123, { chip3: 1, duration: 0.5, ease: "back.out(1.6)" }, 1.44);
+
+      // Exit Scene 1 Headline & Chips
+      tl.to(state.s123, { h1Alpha: 0, h1Y: -30, chip1: 0, chip2: 0, chip3: 0, duration: 0.35, ease: "power2.in" }, 5.6);
+
+      // ---------------- SCENE 2 (6 - 12s) ----------------
+      tl.fromTo(state.s123, { h2Alpha: 0, h2Y: 40 }, { h2Alpha: 1, h2Y: 0, duration: 0.6, ease: "power3.out" }, 6.05);
+      tl.to(state.s123, { phoneTilt: 0, duration: 0.7, ease: "power3.out" }, 6.0);
+      tl.to(state.s123, { chatScroll: 780, duration: 5.2, ease: "power2.inOut" }, 6.2);
+      tl.fromTo(state.s123, { badgeAlpha: 0, badgeScale: 0.2 }, { badgeAlpha: 1, badgeScale: 1, duration: 0.45, ease: "back.out(2)" }, 6.3);
+      tl.to(state.s123, { badgeCount: 27, duration: 4.6, ease: "power1.inOut" }, 6.5);
+
+      // Exit Scene 2 Headline
+      tl.to(state.s123, { h2Alpha: 0, h2Y: -30, duration: 0.35, ease: "power2.in" }, 11.6);
+
+      // ---------------- SCENE 3 (12 - 17s) ----------------
+      tl.fromTo(state.s123, { h3Alpha: 0, h3Y: 40 }, { h3Alpha: 1, h3Y: 0, duration: 0.6, ease: "power3.out" }, 12.05);
+      tl.to(state.s123, { phoneDim: 0.78, duration: 0.5, ease: "power2.out" }, 12.0);
+      tl.fromTo(state.s123, { clockAlpha: 0, clockScale: 0.7 }, { clockAlpha: 1, clockScale: 1, duration: 0.6, ease: "back.out(1.6)" }, 12.15);
+      tl.fromTo(state.s123, { clockProgress: 0.05 }, { clockProgress: 0.88, duration: 4.3, ease: "power1.inOut" }, 12.2);
+
+      // Exit Scene 3 & Transition to Light
+      tl.to(state.s123, { alpha: 0, h3Alpha: 0, h3Y: -30, duration: 0.45, ease: "power2.in" }, 16.55);
+
+      // ---------------- SCENE 4 (17 - 23s) ----------------
+      tl.to(state.bg, { c1: "#F6FBFB", c2: "#E5F6F5", lightGlow: 1, duration: 0.6, ease: "power2.inOut" }, 16.75);
+      tl.set(state.s456, { alpha: 1 }, 17.0);
+      tl.fromTo(state.s456, { h4Alpha: 0, h4Y: 40 }, { h4Alpha: 1, h4Y: 0, duration: 0.65, ease: "power3.out" }, 17.1);
+      tl.fromTo(state.s456, { phoneAlpha: 0, phoneY: 180 }, { phoneAlpha: 1, phoneY: 0, duration: 0.8, ease: "power3.out" }, 17.22);
+
+      tl.to(state.s456, { card1: 1, duration: 0.45, ease: "power3.out" }, 18.0);
+      tl.to(state.s456, { card2: 1, duration: 0.45, ease: "power3.out" }, 18.12);
+      tl.to(state.s456, { card3: 1, duration: 0.45, ease: "power3.out" }, 18.24);
+      tl.to(state.s456, { card4: 1, duration: 0.45, ease: "power3.out" }, 18.36);
+
+      // Exit Scene 4 Headline
+      tl.to(state.s456, { h4Alpha: 0, h4Y: -30, duration: 0.35, ease: "power2.in" }, 22.6);
+
+      // ---------------- SCENE 5 (23 - 31s) ----------------
+      tl.fromTo(state.s456, { h5Alpha: 0, h5Y: 40 }, { h5Alpha: 1, h5Y: 0, duration: 0.6, ease: "power3.out" }, 23.05);
+      // (a) Choose treatment card highlight on homepage then crossfade to booking steps
+      tl.to(state.s456, { step1Select: 1, duration: 0.4, ease: "power2.out" }, 23.2);
+      tl.to(state.s456, { homeAlpha: 0, bookingAlpha: 1, duration: 0.45, ease: "power2.inOut" }, 24.1);
+
+      // (b) Mini calendar appears & date selected
+      tl.to(state.s456, { step2Cal: 1, duration: 0.4, ease: "power3.out" }, 24.3);
+      tl.to(state.s456, { step2DateSelect: 1, duration: 0.35, ease: "back.out(2)" }, 25.0);
+
+      // (c) Time slot pills & "11:30 AM" selected
+      tl.to(state.s456, { step3Slots: 1, duration: 0.4, ease: "power3.out" }, 25.6);
+      tl.to(state.s456, { step3SlotSelect: 1, duration: 0.35, ease: "back.out(2)" }, 26.3);
+
+      // (d) Name + phone fields filling in
+      tl.to(state.s456, { step4Form: 1, duration: 0.4, ease: "power3.out" }, 27.0);
+      tl.to(state.s456, { step4Typing: 1, duration: 0.9, ease: "none" }, 27.3);
+
+      // (e) Green success tick with "Booking confirmed"
+      tl.to(state.s456, { step5Confirm: 1, duration: 0.5, ease: "back.out(1.7)" }, 28.6);
+
+      // Floating chips for Scene 5
+      tl.to(state.s456, { chip1: 1, duration: 0.45, ease: "back.out(1.6)" }, 23.5);
+      tl.to(state.s456, { chip2: 1, duration: 0.45, ease: "back.out(1.6)" }, 23.62);
+      tl.to(state.s456, { chip3: 1, duration: 0.45, ease: "back.out(1.6)" }, 23.74);
+
+      // Exit Scene 5 Headline & Chips
+      tl.to(state.s456, { h5Alpha: 0, h5Y: -30, chip1: 0, chip2: 0, chip3: 0, duration: 0.35, ease: "power2.in" }, 30.6);
+
+      // ---------------- SCENE 6 (31 - 36s) ----------------
+      tl.fromTo(state.s456, { h6Alpha: 0, h6Y: 40 }, { h6Alpha: 1, h6Y: 0, duration: 0.6, ease: "power3.out" }, 31.05);
+      tl.fromTo(state.s456, { notifAlpha: 0, notifY: -90 }, { notifAlpha: 1, notifY: 0, duration: 0.65, ease: "back.out(1.4)" }, 31.35);
+      tl.to(state.s456, { chip6: 1, duration: 0.5, ease: "back.out(1.6)" }, 31.65);
+
+      // Ringing bell wiggle
+      tl.to(state.s456, { bellAngle: 22, duration: 0.12, yoyo: true, repeat: 11, ease: "sine.inOut" }, 31.8);
+      tl.set(state.s456, { bellAngle: 0 }, 33.5);
+
+      // Exit Scene 6
+      tl.to(state.s456, { alpha: 0, h6Alpha: 0, h6Y: -30, phoneY: 120, duration: 0.45, ease: "power2.in" }, 35.55);
+
+      // ---------------- SCENE 7 (36 - 45s) ----------------
+      tl.to(state.bg, { c1: "#0B3C5D", c2: "#07263D", lightGlow: 0, duration: 0.6, ease: "power2.inOut" }, 35.75);
+      tl.set(state.s7, { alpha: 1 }, 36.0);
+      tl.fromTo(state.s7, { h7Alpha: 0, h7Y: 40 }, { h7Alpha: 1, h7Y: 0, duration: 0.65, ease: "power3.out" }, 36.1);
+      tl.fromTo(state.s7, { laptopAlpha: 0, laptopY: 140 }, { laptopAlpha: 1, laptopY: 0, duration: 0.8, ease: "power3.out" }, 36.22);
+
+      tl.to(state.s7, { stat1: 1, duration: 0.45, ease: "power3.out" }, 36.8);
+      tl.to(state.s7, { stat2: 1, duration: 0.45, ease: "power3.out" }, 36.92);
+      tl.to(state.s7, { stat3: 1, duration: 0.45, ease: "power3.out" }, 37.04);
+
+      // New booking block pops in & status chip changes "Pending" -> "Confirmed"
+      tl.fromTo(state.s7, { newBlockScale: 0 }, { newBlockScale: 1, duration: 0.55, ease: "back.out(1.8)" }, 38.2);
+      tl.to(state.s7, { statusConfirmed: 1, duration: 0.45, ease: "power2.inOut" }, 39.6);
+
+      // Floating chips
+      tl.to(state.s7, { chip1: 1, duration: 0.45, ease: "back.out(1.6)" }, 37.3);
+      tl.to(state.s7, { chip2: 1, duration: 0.45, ease: "back.out(1.6)" }, 37.42);
+      tl.to(state.s7, { chip3: 1, duration: 0.45, ease: "back.out(1.6)" }, 37.54);
+      tl.to(state.s7, { chip4: 1, duration: 0.45, ease: "back.out(1.6)" }, 37.66);
+
+      // Exit Scene 7
+      tl.to(state.s7, { alpha: 0, h7Alpha: 0, h7Y: -30, laptopY: 100, duration: 0.45, ease: "power2.in" }, 44.55);
+
+      // ---------------- SCENE 8 (45 - 50s) ----------------
+      tl.set(state.s8, { alpha: 1 }, 45.0);
+      tl.fromTo(state.s8, { h8Alpha: 0, h8Y: 40 }, { h8Alpha: 1, h8Y: 0, duration: 0.6, ease: "power3.out" }, 45.1);
+      tl.to(state.s8, { item1: 1, duration: 0.5, ease: "power3.out" }, 45.55);
+      tl.to(state.s8, { item2: 1, duration: 0.5, ease: "power3.out" }, 46.05);
+      tl.to(state.s8, { item3: 1, duration: 0.5, ease: "power3.out" }, 46.55);
+      tl.to(state.s8, { item4: 1, duration: 0.5, ease: "power3.out" }, 47.05);
+
+      // Exit Scene 8
+      tl.to(state.s8, { alpha: 0, h8Alpha: 0, h8Y: -30, duration: 0.45, ease: "power2.in" }, 49.55);
+
+      // ---------------- SCENE 9 (50 - 55s) ----------------
+      tl.to(state.bg, { c1: "#0FB5AE", c2: "#0B3C5D", lightGlow: 0, duration: 0.65, ease: "power2.inOut" }, 49.75);
+      tl.set(state.s9, { alpha: 1 }, 50.0);
+      tl.fromTo(state.s9, { brandAlpha: 0, brandY: 40 }, { brandAlpha: 1, brandY: 0, duration: 0.6, ease: "power3.out" }, 50.1);
+      tl.fromTo(state.s9, { h9Alpha: 0, h9Y: 40 }, { h9Alpha: 1, h9Y: 0, duration: 0.6, ease: "power3.out" }, 50.24);
+      tl.fromTo(state.s9, { ctaAlpha: 0, ctaY: 40 }, { ctaAlpha: 1, ctaY: 0, duration: 0.6, ease: "back.out(1.6)" }, 50.42);
+      tl.fromTo(state.s9, { contactAlpha: 0, contactY: 40 }, { contactAlpha: 1, contactY: 0, duration: 0.6, ease: "power3.out" }, 50.58);
+      tl.fromTo(state.s9, { subAlpha: 0 }, { subAlpha: 1, duration: 0.6, ease: "power2.out" }, 50.75);
+    }
+
+    // ============================================================================
+    // CANVAS 2D DRAWING HELPERS
+    // ============================================================================
+    function roundRectPath(ctx, x, y, w, h, r) {
+      const radius = typeof r === "number" ? { tl: r, tr: r, br: r, bl: r } : { tl: 0, tr: 0, br: 0, bl: 0, ...r };
+      ctx.beginPath();
+      ctx.moveTo(x + radius.tl, y);
+      ctx.lineTo(x + w - radius.tr, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + radius.tr);
+      ctx.lineTo(x + w, y + h - radius.br);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - radius.br, y + h);
+      ctx.lineTo(x + radius.bl, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - radius.bl);
+      ctx.lineTo(x, y + radius.tl);
+      ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+      ctx.closePath();
+    }
+
+    function fillRoundRect(ctx, x, y, w, h, r, fillStyle) {
+      roundRectPath(ctx, x, y, w, h, r);
+      ctx.fillStyle = fillStyle;
+      ctx.fill();
+    }
+
+    function strokeRoundRect(ctx, x, y, w, h, r, strokeStyle, lineWidth = 2) {
+      roundRectPath(ctx, x, y, w, h, r);
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+    }
+
+    /**
+     * Wrapped, centered, multi-line text helper with exact phrase/keyword highlighting.
+     */
+    function drawHighlightedHeadline(ctx, {
+      text,
+      highlightPhrase = "",
+      highlightColor = COLORS.coral,
+      baseColor = COLORS.softWhite,
+      x = W / 2,
+      y = 140,
+      maxWidth = W - 160,
+      fontSize = 86,
+      lineHeight = 1.16,
+      fontWeight = 800,
+      alpha = 1,
+      offsetY = 0
+    }) {
+      if (alpha <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha *= alpha;
+      ctx.font = `${fontWeight} ${fontSize}px 'Plus Jakarta Sans', sans-serif`;
+      ctx.textBaseline = "top";
+
+      const words = text.split(" ");
+      // Mark which word indices belong to highlightPhrase
+      const hlWords = highlightPhrase ? highlightPhrase.toLowerCase().split(" ") : [];
+      const isHighlighted = new Array(words.length).fill(false);
+
+      if (hlWords.length > 0) {
+        for (let i = 0; i <= words.length - hlWords.length; i++) {
+          let match = true;
+          for (let j = 0; j < hlWords.length; j++) {
+            const cleanW = words[i + j].replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+            const cleanH = hlWords[j].replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+            if (cleanW !== cleanH) {
+              match = false;
+              break;
+            }
+          }
+          if (match) {
+            for (let j = 0; j < hlWords.length; j++) isHighlighted[i + j] = true;
+          }
+        }
+      }
+
+      // Wrap into lines (max 3 lines, shrink slightly if needed to respect 80px safe margin)
+      const spaceW = ctx.measureText(" ").width;
+      const lines = [];
+      let currentLine = [];
+      let currentW = 0;
+
+      words.forEach((word, idx) => {
+        const wWidth = ctx.measureText(word).width;
+        const addedW = currentLine.length === 0 ? wWidth : spaceW + wWidth;
+        if (currentW + addedW > maxWidth && currentLine.length > 0) {
+          lines.push({ tokens: currentLine, width: currentW });
+          currentLine = [{ word, hl: isHighlighted[idx], width: wWidth }];
+          currentW = wWidth;
+        } else {
+          currentLine.push({ word, hl: isHighlighted[idx], width: wWidth });
+          currentW += addedW;
+        }
+      });
+      if (currentLine.length > 0) {
+        lines.push({ tokens: currentLine, width: currentW });
+      }
+
+      lines.forEach((line, lineIdx) => {
+        let cursorX = x - line.width / 2;
+        const lineY = y + offsetY + lineIdx * (fontSize * lineHeight);
+        line.tokens.forEach((tok) => {
+          ctx.fillStyle = tok.hl ? highlightColor : baseColor;
+          ctx.fillText(tok.word, cursorX, lineY);
+          cursorX += tok.width + spaceW;
+        });
+      });
+
+      ctx.restore();
+    }
+
+    // Drawn Icons
+    function drawToothLogo(ctx, cx, cy, size, color = COLORS.teal) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      const s = size / 100;
+      ctx.scale(s, s);
+      ctx.beginPath();
+      ctx.moveTo(0, -34);
+      ctx.bezierCurveTo(-18, -46, -44, -36, -42, -8);
+      ctx.bezierCurveTo(-40, 12, -30, 26, -24, 44);
+      ctx.bezierCurveTo(-20, 52, -12, 48, -8, 30);
+      ctx.bezierCurveTo(-4, 16, 4, 16, 8, 30);
+      ctx.bezierCurveTo(12, 48, 20, 52, 24, 44);
+      ctx.bezierCurveTo(30, 26, 40, 12, 42, -8);
+      ctx.bezierCurveTo(44, -36, 18, -46, 0, -34);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      // Shine arc
+      ctx.beginPath();
+      ctx.arc(-16, -16, 10, Math.PI * 0.95, Math.PI * 1.55);
+      ctx.strokeStyle = "rgba(255,255,255,0.65)";
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawMiniIcon(ctx, type, cx, cy, r, color) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 3;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      if (type === "clock") {
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, -r * 0.55);
+        ctx.lineTo(0, 0);
+        ctx.lineTo(r * 0.45, r * 0.25);
+        ctx.stroke();
+      } else if (type === "check") {
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.42, 0);
+        ctx.lineTo(-r * 0.1, r * 0.34);
+        ctx.lineTo(r * 0.46, -r * 0.32);
+        ctx.stroke();
+      } else if (type === "calendar") {
+        strokeRoundRect(ctx, -r, -r * 0.85, r * 2, r * 1.8, 5, color, 2.8);
+        ctx.beginPath();
+        ctx.moveTo(-r, -r * 0.25);
+        ctx.lineTo(r, -r * 0.25);
+        ctx.moveTo(-r * 0.45, -r * 1.1);
+        ctx.lineTo(-r * 0.45, -r * 0.6);
+        ctx.moveTo(r * 0.45, -r * 1.1);
+        ctx.lineTo(r * 0.45, -r * 0.6);
+        ctx.stroke();
+      } else if (type === "chat") {
+        roundRectPath(ctx, -r, -r * 0.85, r * 2, r * 1.55, 8);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(-r * 0.4, -r * 0.08, 2.2, 0, Math.PI * 2);
+        ctx.arc(0, -r * 0.08, 2.2, 0, Math.PI * 2);
+        ctx.arc(r * 0.4, -r * 0.08, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === "user") {
+        ctx.beginPath();
+        ctx.arc(0, -r * 0.3, r * 0.42, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, r * 0.85, r * 0.78, Math.PI * 1.15, Math.PI * 1.85);
+        ctx.stroke();
+      } else if (type === "spark") {
+        ctx.beginPath();
+        ctx.moveTo(0, -r);
+        ctx.lineTo(r * 0.28, -r * 0.28);
+        ctx.lineTo(r, 0);
+        ctx.lineTo(r * 0.28, r * 0.28);
+        ctx.lineTo(0, r);
+        ctx.lineTo(-r * 0.28, r * 0.28);
+        ctx.lineTo(-r, 0);
+        ctx.lineTo(-r * 0.28, -r * 0.28);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawFloatingChip(ctx, {
+      text,
+      icon = "check",
+      iconColor = COLORS.teal,
+      x,
+      y,
+      progress = 1,
+      time = 0,
+      phase = 0
+    }) {
+      if (progress <= 0.001) return;
+      ctx.save();
+      const bobY = Math.sin(time * 3.1 + phase) * 8;
+      const enterY = (1 - progress) * 32;
+      ctx.globalAlpha *= Math.min(1, progress);
+      ctx.translate(x, y + bobY + enterY);
+      const scale = 0.85 + 0.15 * progress;
+      ctx.scale(scale, scale);
+
+      ctx.font = "700 27px 'Plus Jakarta Sans', sans-serif";
+      const textW = ctx.measureText(text).width;
+      const pillW = textW + 96;
+      const pillH = 68;
+
+      ctx.shadowColor = "rgba(7, 18, 31, 0.26)";
+      ctx.shadowBlur = 26;
+      ctx.shadowOffsetY = 10;
+
+      fillRoundRect(ctx, -pillW / 2, -pillH / 2, pillW, pillH, 34, "#FFFFFF");
+      ctx.shadowColor = "transparent";
+      strokeRoundRect(ctx, -pillW / 2, -pillH / 2, pillW, pillH, 34, "rgba(15, 181, 174, 0.28)", 2);
+
+      // Icon circle
+      const iconX = -pillW / 2 + 36;
+      ctx.beginPath();
+      ctx.arc(iconX, 0, 20, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(15, 181, 174, 0.14)";
+      ctx.fill();
+      drawMiniIcon(ctx, icon, iconX, 0, 11, iconColor);
+
+      ctx.fillStyle = COLORS.ink;
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "left";
+      ctx.fillText(text, -pillW / 2 + 68, 1);
+
+      ctx.restore();
+    }
+
+    function drawPhoneMockup(ctx, { x, y, w, h, tiltDeg = 0, screenBg = "#0E1B26", drawScreen }) {
+      ctx.save();
+      ctx.translate(x, y);
+      if (tiltDeg !== 0) ctx.rotate((tiltDeg * Math.PI) / 180);
+
+      // Outer Soft Shadow
+      ctx.shadowColor = "rgba(5, 12, 22, 0.42)";
+      ctx.shadowBlur = 55;
+      ctx.shadowOffsetY = 26;
+
+      // Dark Bezel (60px rounded corners)
+      fillRoundRect(ctx, -w / 2, -h / 2, w, h, 60, "#121D2B");
+      ctx.shadowColor = "transparent";
+      strokeRoundRect(ctx, -w / 2, -h / 2, w, h, 60, "rgba(255,255,255,0.18)", 4);
+
+      // Inner Screen
+      const pad = 18;
+      const sx = -w / 2 + pad;
+      const sy = -h / 2 + pad;
+      const sw = w - pad * 2;
+      const sh = h - pad * 2;
+
+      ctx.save();
+      roundRectPath(ctx, sx, sy, sw, sh, 46);
+      ctx.clip();
+      ctx.fillStyle = screenBg;
+      ctx.fillRect(sx, sy, sw, sh);
+
+      if (drawScreen) {
+        drawScreen(ctx, sx, sy, sw, sh);
+      }
+      ctx.restore();
+
+      // Top Notch / Dynamic Island
+      fillRoundRect(ctx, -86, sy + 14, 172, 32, 16, "#091019");
+      ctx.beginPath();
+      ctx.arc(54, sy + 30, 6, 0, Math.PI * 2);
+      ctx.fillStyle = "#1D3557";
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // ============================================================================
+    // SCENE RENDERERS
+    // ============================================================================
+    function drawBackground(ctx) {
+      const grad = ctx.createLinearGradient(0, 0, W * 0.4, H);
+      grad.addColorStop(0, state.bg.c1);
+      grad.addColorStop(1, state.bg.c2);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+
+      // Soft teal glow for light scenes
+      if (state.bg.lightGlow > 0.01) {
+        ctx.save();
+        ctx.globalAlpha = state.bg.lightGlow;
+        const rad = ctx.createRadialGradient(W / 2, H * 0.54, 40, W / 2, H * 0.54, 620);
+        rad.addColorStop(0, "rgba(15, 181, 174, 0.22)");
+        rad.addColorStop(1, "rgba(15, 181, 174, 0)");
+        ctx.fillStyle = rad;
+        ctx.fillRect(0, 0, W, H);
+        ctx.restore();
+      }
+
+      // Subtle decorative ambient circles
+      ctx.save();
+      ctx.globalAlpha = 0.06;
+      ctx.beginPath();
+      ctx.arc(W * 0.88, H * 0.14, 240, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.teal;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(W * 0.12, H * 0.86, 280, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.coral;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawScenes123(ctx) {
+      const s = state.s123;
+      if (s.alpha <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha = s.alpha;
+
+      // Headlines for Scenes 1, 2, 3
+      drawHighlightedHeadline(ctx, {
+        text: "Still booking appointments over phone and WhatsApp?",
+        highlightPhrase: "phone and WhatsApp",
+        highlightColor: COLORS.coral,
+        baseColor: COLORS.softWhite,
+        y: 120,
+        fontSize: 84,
+        alpha: s.h1Alpha,
+        offsetY: s.h1Y
+      });
+
+      drawHighlightedHeadline(ctx, {
+        text: "Same questions. Again and again.",
+        highlightPhrase: "Again and again",
+        highlightColor: COLORS.coral,
+        baseColor: COLORS.softWhite,
+        y: 145,
+        fontSize: 88,
+        alpha: s.h2Alpha,
+        offsetY: s.h2Y
+      });
+
+      drawHighlightedHeadline(ctx, {
+        text: "It takes up your time, doesn't it?",
+        highlightPhrase: "your time",
+        highlightColor: COLORS.coral,
+        baseColor: COLORS.softWhite,
+        y: 145,
+        fontSize: 88,
+        alpha: s.h3Alpha,
+        offsetY: s.h3Y
+      });
+
+      // Phone with WhatsApp-style Chat
+      if (s.phoneAlpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha *= s.phoneAlpha;
+
+        const phoneX = W / 2;
+        const phoneY = 1170 + s.phoneY;
+        const phoneW = 630;
+        const phoneH = 1160;
+
+        drawPhoneMockup(ctx, {
+          x: phoneX,
+          y: phoneY,
+          w: phoneW,
+          h: phoneH,
+          tiltDeg: s.phoneTilt,
+          screenBg: "#0B141A",
+          drawScreen: (ctx, sx, sy, sw, sh) => {
+            // WhatsApp Header
+            ctx.fillStyle = "#1F2C34";
+            ctx.fillRect(sx, sy, sw, 142);
+
+            // Clinic Avatar
+            ctx.beginPath();
+            ctx.arc(sx + 66, sy + 92, 30, 0, Math.PI * 2);
+            ctx.fillStyle = COLORS.teal;
+            ctx.fill();
+            drawToothLogo(ctx, sx + 66, sy + 92, 34, "#FFFFFF");
+
+            ctx.fillStyle = "#E9EDEF";
+            ctx.font = "700 28px 'Plus Jakarta Sans', sans-serif";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "top";
+            ctx.fillText("Clinic Reception", sx + 114, sy + 66);
+
+            ctx.fillStyle = "#8696A0";
+            ctx.font = "500 21px 'Plus Jakarta Sans', sans-serif";
+            ctx.fillText("24 patients typing...", sx + 114, sy + 102);
+
+            // Chat Messages Clip Area
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(sx, sy + 142, sw, sh - 142);
+            ctx.clip();
+
+            const messages = [
+              { from: "in", text: "Hi, any slot for root canal tomorrow?", time: "10:12 AM", prog: s.msg1 },
+              { from: "out", text: "Checking register, please wait 10 mins", time: "10:19 AM", prog: s.msg2 },
+              { from: "in", text: "What's the consultation fee?", time: "10:21 AM", prog: s.msg3 },
+              { from: "in", text: "Is the doctor free at 6 PM today?", time: "10:22 AM", prog: s.msg4 },
+              { from: "in", text: "Hello?? Still waiting for confirmation", time: "10:25 AM", prog: 1 },
+              { from: "out", text: "6 PM is full, how about 7:30 PM?", time: "10:31 AM", prog: 1 },
+              { from: "in", text: "Any slot tomorrow morning instead?", time: "10:33 AM", prog: 1 },
+              { from: "in", text: "Can you send clinic location & fee?", time: "10:35 AM", prog: 1 },
+              { from: "in", text: "Doctor available on Sunday?", time: "10:36 AM", prog: 1 },
+              { from: "out", text: "Please call reception to confirm slot", time: "10:40 AM", prog: 1 },
+              { from: "in", text: "Phone line is busy since morning!", time: "10:42 AM", prog: 1 },
+              { from: "in", text: "Please book 11 AM for tooth cleaning", time: "10:44 AM", prog: 1 }
+            ];
+
+            let curY = sy + 176 - s.chatScroll;
+            messages.forEach((m) => {
+              if (m.prog <= 0.01) return;
+              ctx.save();
+              ctx.globalAlpha *= m.prog;
+              const slideX = (1 - m.prog) * (m.from === "in" ? -40 : 40);
+              const bw = 445;
+              const bh = 98;
+              const bx = m.from === "in" ? sx + 28 + slideX : sx + sw - bw - 28 + slideX;
+
+              fillRoundRect(ctx, bx, curY, bw, bh, 22, m.from === "in" ? "#202C33" : "#005C4B");
+              ctx.fillStyle = "#E9EDEF";
+              ctx.font = "500 24px 'Plus Jakarta Sans', sans-serif";
+              ctx.textAlign = "left";
+              ctx.textBaseline = "top";
+              ctx.fillText(m.text, bx + 22, curY + 22, bw - 44);
+
+              ctx.fillStyle = "rgba(233,237,239,0.6)";
+              ctx.font = "500 18px 'Plus Jakarta Sans', sans-serif";
+              ctx.textAlign = "right";
+              ctx.fillText(m.time, bx + bw - 18, curY + 64);
+
+              ctx.restore();
+              curY += bh + 22;
+            });
+
+            ctx.restore();
+
+            // Dim overlay during Scene 3
+            if (s.phoneDim > 0.01) {
+              ctx.fillStyle = `rgba(7, 18, 31, ${s.phoneDim})`;
+              ctx.fillRect(sx, sy, sw, sh);
+            }
+          }
+        });
+
+        // Scene 2 Red Unread Counter Badge
+        if (s.badgeAlpha > 0.01) {
+          ctx.save();
+          ctx.globalAlpha *= s.badgeAlpha * (1 - s.phoneDim * 0.85);
+          const bx = phoneX + 255;
+          const by = phoneY - 490;
+          ctx.translate(bx, by);
+          ctx.scale(s.badgeScale, s.badgeScale);
+
+          ctx.shadowColor = "rgba(255, 59, 48, 0.55)";
+          ctx.shadowBlur = 35;
+          ctx.beginPath();
+          ctx.arc(0, 0, 74, 0, Math.PI * 2);
+          ctx.fillStyle = "#FF3B30";
+          ctx.fill();
+          ctx.shadowColor = "transparent";
+          ctx.lineWidth = 6;
+          ctx.strokeStyle = "#FFFFFF";
+          ctx.stroke();
+
+          ctx.fillStyle = "#FFFFFF";
+          ctx.font = "800 58px 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(String(Math.round(s.badgeCount)), 0, 3);
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      // Scene 1 Floating Chips
+      drawFloatingChip(ctx, {
+        text: "Any slot tomorrow?",
+        icon: "chat",
+        iconColor: COLORS.coral,
+        x: 285,
+        y: 740,
+        progress: s.chip1,
+        time: state.time,
+        phase: 0
+      });
+      drawFloatingChip(ctx, {
+        text: "What's the fee?",
+        icon: "chat",
+        iconColor: COLORS.teal,
+        x: 785,
+        y: 960,
+        progress: s.chip2,
+        time: state.time,
+        phase: 1.5
+      });
+      drawFloatingChip(ctx, {
+        text: "Is the doctor free?",
+        icon: "clock",
+        iconColor: COLORS.coral,
+        x: 310,
+        y: 1470,
+        progress: s.chip3,
+        time: state.time,
+        phase: 3.1
+      });
+
+      // Scene 3 Big Center Clock with Red Arc Ticking
+      if (s.clockAlpha > 0.01) {
+        ctx.save();
+        ctx.globalAlpha *= s.clockAlpha;
+        const cx = W / 2;
+        const cy = 1080;
+        const r = 250;
+        ctx.translate(cx, cy);
+        ctx.scale(s.clockScale, s.clockScale);
+
+        // Dark glass circle
+        ctx.shadowColor = "rgba(0,0,0,0.55)";
+        ctx.shadowBlur = 50;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fillStyle = "#0D1E31";
+        ctx.fill();
+        ctx.shadowColor = "transparent";
+
+        // Track ring
+        ctx.beginPath();
+        ctx.arc(0, 0, r - 22, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.lineWidth = 22;
+        ctx.stroke();
+
+        // Ticking Red Arc
+        const startAng = -Math.PI / 2;
+        const endAng = startAng + s.clockProgress * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, r - 22, startAng, endAng);
+        ctx.strokeStyle = COLORS.coral;
+        ctx.lineWidth = 22;
+        ctx.lineCap = "round";
+        ctx.stroke();
+
+        // Hour tick marks
+        for (let i = 0; i < 12; i++) {
+          const ang = (i * Math.PI) / 6;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(ang) * (r - 64), Math.sin(ang) * (r - 64));
+          ctx.lineTo(Math.cos(ang) * (r - 48), Math.sin(ang) * (r - 48));
+          ctx.strokeStyle = "rgba(255,255,255,0.35)";
+          ctx.lineWidth = 5;
+          ctx.stroke();
+        }
+
+        // Clock Hands
+        const minAng = startAng + s.clockProgress * Math.PI * 2;
+        const hrAng = startAng + s.clockProgress * Math.PI * 0.5;
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(hrAng) * 105, Math.sin(hrAng) * 105);
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = 12;
+        ctx.lineCap = "round";
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(minAng) * 155, Math.sin(minAng) * 155);
+        ctx.strokeStyle = COLORS.coral;
+        ctx.lineWidth = 10;
+        ctx.lineCap = "round";
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 16, 0, Math.PI * 2);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    function drawScenes456(ctx) {
+      const s = state.s456;
+      if (s.alpha <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha = s.alpha;
+
+      // Headlines for Scenes 4, 5, 6
+      drawHighlightedHeadline(ctx, {
+        text: "Give your clinic a new online look",
+        highlightPhrase: "online",
+        highlightColor: COLORS.teal,
+        baseColor: COLORS.ink,
+        y: 125,
+        fontSize: 88,
+        alpha: s.h4Alpha,
+        offsetY: s.h4Y
+      });
+
+      drawHighlightedHeadline(ctx, {
+        text: "Patients book their own slot",
+        highlightPhrase: "their own slot",
+        highlightColor: COLORS.teal,
+        baseColor: COLORS.ink,
+        y: 135,
+        fontSize: 88,
+        alpha: s.h5Alpha,
+        offsetY: s.h5Y
+      });
+
+      drawHighlightedHeadline(ctx, {
+        text: "Automatic reminders before every visit",
+        highlightPhrase: "Automatic reminders",
+        highlightColor: COLORS.teal,
+        baseColor: COLORS.ink,
+        y: 125,
+        fontSize: 84,
+        alpha: s.h6Alpha,
+        offsetY: s.h6Y
+      });
+
+      // Phone Mockup
+      if (s.phoneAlpha > 0.001) {
+        const phoneX = W / 2;
+        const phoneY = 1165 + s.phoneY;
+        const phoneW = 650;
+        const phoneH = 1210;
+
+        ctx.save();
+        ctx.globalAlpha *= s.phoneAlpha;
+
+        drawPhoneMockup(ctx, {
+          x: phoneX,
+          y: phoneY,
+          w: phoneW,
+          h: phoneH,
+          tiltDeg: 0,
+          screenBg: "#FFFFFF",
+          drawScreen: (ctx, sx, sy, sw, sh) => {
+            // Top Website Navbar
+            ctx.fillStyle = "#F3FAF9";
+            ctx.fillRect(sx, sy, sw, 136);
+            drawToothLogo(ctx, sx + 54, sy + 88, 36, COLORS.teal);
+            ctx.fillStyle = COLORS.ink;
+            ctx.font = "800 24px 'Plus Jakarta Sans', sans-serif";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText(CLINIC_DEMO, sx + 88, sy + 88);
+
+            // SCENE 4 WEBSITE HOMEPAGE VIEW
+            if (s.homeAlpha > 0.01) {
+              ctx.save();
+              ctx.globalAlpha *= s.homeAlpha;
+
+              // Hero Banner Card
+              const hx = sx + 28;
+              const hy = sy + 162;
+              const hw = sw - 56;
+              const hh = 365;
+              const heroGrad = ctx.createLinearGradient(hx, hy, hx + hw, hy + hh);
+              heroGrad.addColorStop(0, "#0FB5AE");
+              heroGrad.addColorStop(1, "#0B3C5D");
+              fillRoundRect(ctx, hx, hy, hw, hh, 32, heroGrad);
+
+              drawToothLogo(ctx, hx + hw / 2, hy + 72, 54, "#FFFFFF");
+
+              ctx.fillStyle = "#FFFFFF";
+              ctx.font = "800 30px 'Plus Jakarta Sans', sans-serif";
+              ctx.textAlign = "center";
+              ctx.fillText(CLINIC_DEMO, hx + hw / 2, hy + 132);
+
+              ctx.font = "800 44px 'Plus Jakarta Sans', sans-serif";
+              ctx.fillText("Your smile, our care", hx + hw / 2, hy + 190);
+
+              // Buttons: "Book Appointment" and "Call Now"
+              fillRoundRect(ctx, hx + 32, hy + 252, 285, 74, 37, "#FFFFFF");
+              ctx.fillStyle = COLORS.deepBlue;
+              ctx.font = "800 23px 'Plus Jakarta Sans', sans-serif";
+              ctx.fillText("Book Appointment", hx + 32 + 142, hy + 289);
+
+              fillRoundRect(ctx, hx + 334, hy + 252, 192, 74, 37, "rgba(255,255,255,0.18)");
+              strokeRoundRect(ctx, hx + 334, hy + 252, 192, 74, 37, "#FFFFFF", 2.5);
+              ctx.fillStyle = "#FFFFFF";
+              ctx.fillText("Call Now", hx + 334 + 96, hy + 289);
+
+              // Section Title
+              ctx.fillStyle = COLORS.ink;
+              ctx.font = "800 28px 'Plus Jakarta Sans', sans-serif";
+              ctx.textAlign = "left";
+              ctx.fillText("Our Treatments", sx + 34, hy + 412);
+
+              // Row/Grid of 4 Service Cards: Cleaning, Root Canal, Braces, Implants
+              const services = [
+                { name: "Cleaning", sub: "30 mins • Gentle", prog: s.card1, selected: s.step1Select },
+                { name: "Root Canal", sub: "45 mins • Painless", prog: s.card2, selected: 0 },
+                { name: "Braces", sub: "Clear & Metal", prog: s.card3, selected: 0 },
+                { name: "Implants", sub: "Permanent tooth", prog: s.card4, selected: 0 }
+              ];
+
+              services.forEach((srv, idx) => {
+                if (srv.prog <= 0.01) return;
+                ctx.save();
+                ctx.globalAlpha *= srv.prog;
+                const col = idx % 2;
+                const row = Math.floor(idx / 2);
+                const cw = (sw - 76) / 2;
+                const ch = 205;
+                const cx = sx + 28 + col * (cw + 20);
+                const cy = hy + 448 + row * (ch + 20) + (1 - srv.prog) * 30;
+
+                const isSel = srv.selected > 0.05;
+                fillRoundRect(ctx, cx, cy, cw, ch, 24, isSel ? "#E6FAF8" : "#F5F9FC");
+                strokeRoundRect(
+                  ctx,
+                  cx,
+                  cy,
+                  cw,
+                  ch,
+                  24,
+                  isSel ? COLORS.teal : "rgba(11,60,93,0.1)",
+                  isSel ? 5 : 2
+                );
+
+                drawToothLogo(ctx, cx + 44, cy + 54, 34, COLORS.teal);
+                ctx.fillStyle = COLORS.ink;
+                ctx.font = "800 27px 'Plus Jakarta Sans', sans-serif";
+                ctx.textAlign = "left";
+                ctx.fillText(srv.name, cx + 24, cy + 118);
+
+                ctx.fillStyle = COLORS.slate;
+                ctx.font = "500 20px 'Plus Jakarta Sans', sans-serif";
+                ctx.fillText(srv.sub, cx + 24, cy + 154);
+
+                ctx.restore();
+              });
+
+              ctx.restore();
+            }
+
+            // SCENE 5 BOOKING FLOW INSIDE PHONE
+            if (s.bookingAlpha > 0.01) {
+              ctx.save();
+              ctx.globalAlpha *= s.bookingAlpha;
+
+              const bx = sx + 28;
+              let by = sy + 156;
+              const bw = sw - 56;
+
+              // Selected Treatment Pill
+              fillRoundRect(ctx, bx, by, bw, 76, 20, "#E6FAF8");
+              strokeRoundRect(ctx, bx, by, bw, 76, 20, COLORS.teal, 2.5);
+              ctx.fillStyle = COLORS.deepBlue;
+              ctx.font = "800 24px 'Plus Jakarta Sans', sans-serif";
+              ctx.textAlign = "left";
+              ctx.fillText("✓  Treatment: Teeth Cleaning", bx + 22, by + 39);
+
+              // (b) Mini Calendar
+              if (s.step2Cal > 0.01) {
+                ctx.save();
+                ctx.globalAlpha *= s.step2Cal;
+                const calY = by + 96 + (1 - s.step2Cal) * 20;
+                fillRoundRect(ctx, bx, calY, bw, 230, 22, "#F6F9FC");
+                ctx.fillStyle = COLORS.ink;
+                ctx.font = "800 23px 'Plus Jakarta Sans', sans-serif";
+                ctx.fillText("Select Date — October", bx + 20, calY + 34);
+
+                const days = ["14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25"];
+                const cols = 6;
+                const cellW = (bw - 40) / cols;
+                days.forEach((d, idx) => {
+                  const r = Math.floor(idx / cols);
+                  const c = idx % cols;
+                  const dx = bx + 20 + c * cellW;
+                  const dy = calY + 64 + r * 74;
+                  const sel = idx === 3 ? s.step2DateSelect : 0;
+
+                  fillRoundRect(ctx, dx + 4, dy, cellW - 10, 60, 16, sel > 0.1 ? COLORS.teal : "#FFFFFF");
+                  ctx.fillStyle = sel > 0.1 ? "#FFFFFF" : COLORS.ink;
+                  ctx.font = "700 23px 'Plus Jakarta Sans', sans-serif";
+                  ctx.textAlign = "center";
+                  ctx.fillText(d, dx + (cellW - 2) / 2, dy + 31);
+                });
+                ctx.restore();
+              }
+
+              // (c) Time-Slot Pills ("11:30 AM" selected, some greyed out)
+              if (s.step3Slots > 0.01) {
+                ctx.save();
+                ctx.globalAlpha *= s.step3Slots;
+                const slY = by + 344 + (1 - s.step3Slots) * 20;
+                ctx.fillStyle = COLORS.ink;
+                ctx.font = "800 23px 'Plus Jakarta Sans', sans-serif";
+                ctx.textAlign = "left";
+                ctx.fillText("Available Time Slots", bx + 6, slY + 18);
+
+                const slots = [
+                  { t: "10:00 AM", grey: true },
+                  { t: "11:30 AM", sel: true },
+                  { t: "01:00 PM", grey: false },
+                  { t: "04:00 PM", grey: true },
+                  { t: "05:30 PM", grey: false },
+                  { t: "07:00 PM", grey: false }
+                ];
+                const swCell = (bw - 24) / 3;
+                slots.forEach((sl, idx) => {
+                  const r = Math.floor(idx / 3);
+                  const c = idx % 3;
+                  const px = bx + c * (swCell + 12);
+                  const py = slY + 42 + r * 70;
+                  const isChosen = sl.sel && s.step3SlotSelect > 0.1;
+
+                  fillRoundRect(
+                    ctx,
+                    px,
+                    py,
+                    swCell,
+                    56,
+                    16,
+                    isChosen ? COLORS.teal : sl.grey ? "#E8EEF3" : "#F3F8FB"
+                  );
+                  if (!sl.grey && !isChosen) {
+                    strokeRoundRect(ctx, px, py, swCell, 56, 16, "rgba(15,181,174,0.35)", 2);
+                  }
+                  ctx.fillStyle = isChosen ? "#FFFFFF" : sl.grey ? "#9FB0C0" : COLORS.ink;
+                  ctx.font = "700 20px 'Plus Jakarta Sans', sans-serif";
+                  ctx.textAlign = "center";
+                  ctx.fillText(sl.t, px + swCell / 2, py + 29);
+                });
+                ctx.restore();
+              }
+
+              // (d) Name + Phone Fields filling in
+              if (s.step4Form > 0.01) {
+                ctx.save();
+                ctx.globalAlpha *= s.step4Form;
+                const fy = by + 544 + (1 - s.step4Form) * 20;
+                const fullName = "Aarav Sharma";
+                const fullPhone = "+91 98765 43210";
+                const nChars = Math.floor(fullName.length * s.step4Typing);
+                const pChars = Math.floor(fullPhone.length * s.step4Typing);
+
+                fillRoundRect(ctx, bx, fy, bw, 68, 16, "#F3F8FB");
+                strokeRoundRect(ctx, bx, fy, bw, 68, 16, "rgba(11,60,93,0.15)", 2);
+                ctx.fillStyle = COLORS.slate;
+                ctx.font = "700 19px 'Plus Jakarta Sans', sans-serif";
+                ctx.textAlign = "left";
+                ctx.fillText("Name:", bx + 20, fy + 35);
+                ctx.fillStyle = COLORS.ink;
+                ctx.font = "700 23px 'Plus Jakarta Sans', sans-serif";
+                ctx.fillText(fullName.slice(0, nChars), bx + 100, fy + 35);
+
+                fillRoundRect(ctx, bx, fy + 82, bw, 68, 16, "#F3F8FB");
+                strokeRoundRect(ctx, bx, fy + 82, bw, 68, 16, "rgba(11,60,93,0.15)", 2);
+                ctx.fillStyle = COLORS.slate;
+                ctx.font = "700 19px 'Plus Jakarta Sans', sans-serif";
+                ctx.fillText("Phone:", bx + 20, fy + 117);
+                ctx.fillStyle = COLORS.ink;
+                ctx.font = "700 23px 'Plus Jakarta Sans', sans-serif";
+                ctx.fillText(fullPhone.slice(0, pChars), bx + 105, fy + 117);
+                ctx.restore();
+              }
+
+              // (e) Green Success Tick with "Booking confirmed"
+              if (s.step5Confirm > 0.01) {
+                ctx.save();
+                ctx.globalAlpha *= Math.min(1, s.step5Confirm);
+                const cy = by + 722;
+                ctx.translate(bx + bw / 2, cy + 78);
+                ctx.scale(0.8 + 0.2 * s.step5Confirm, 0.8 + 0.2 * s.step5Confirm);
+
+                fillRoundRect(ctx, -bw / 2, -78, bw, 156, 26, "#ECFDF5");
+                strokeRoundRect(ctx, -bw / 2, -78, bw, 156, 26, COLORS.green, 3);
+
+                drawMiniIcon(ctx, "check", -bw / 2 + 64, 0, 34, COLORS.green);
+
+                ctx.fillStyle = "#065F46";
+                ctx.font = "800 32px 'Plus Jakarta Sans', sans-serif";
+                ctx.textAlign = "left";
+                ctx.textBaseline = "middle";
+                ctx.fillText("Booking confirmed", -bw / 2 + 118, -14);
+
+                ctx.fillStyle = "#047857";
+                ctx.font = "700 22px 'Plus Jakarta Sans', sans-serif";
+                ctx.fillText("Tomorrow at 11:30 AM • Teeth Cleaning", -bw / 2 + 118, 24);
+                ctx.restore();
+              }
+
+              ctx.restore();
+            }
+          }
+        });
+
+        ctx.restore();
+      }
+
+      // Scene 5 Floating Chips
+      drawFloatingChip(ctx, {
+        text: "Free slots",
+        icon: "calendar",
+        iconColor: COLORS.teal,
+        x: 230,
+        y: 680,
+        progress: s.chip1,
+        time: state.time,
+        phase: 0.4
+      });
+      drawFloatingChip(ctx, {
+        text: "Sign up / Login",
+        icon: "user",
+        iconColor: COLORS.deepBlue,
+        x: 830,
+        y: 860,
+        progress: s.chip2,
+        time: state.time,
+        phase: 1.9
+      });
+      drawFloatingChip(ctx, {
+        text: "One-tap booking",
+        icon: "spark",
+        iconColor: COLORS.coral,
+        x: 260,
+        y: 1520,
+        progress: s.chip3,
+        time: state.time,
+        phase: 3.2
+      });
+
+      // Scene 6 Notification Card sliding over the phone
+      if (s.notifAlpha > 0.01) {
+        ctx.save();
+        ctx.globalAlpha *= s.notifAlpha;
+        const nx = W / 2;
+        const ny = 820 + s.notifY;
+        const nw = 880;
+        const nh = 230;
+
+        ctx.translate(nx, ny);
+        ctx.shadowColor = "rgba(9, 30, 50, 0.32)";
+        ctx.shadowBlur = 50;
+        ctx.shadowOffsetY = 22;
+
+        fillRoundRect(ctx, -nw / 2, -nh / 2, nw, nh, 38, "#FFFFFF");
+        ctx.shadowColor = "transparent";
+        strokeRoundRect(ctx, -nw / 2, -nh / 2, nw, nh, 38, COLORS.teal, 4);
+
+        // Ringing Bell Circle
+        const bellX = -nw / 2 + 95;
+        ctx.beginPath();
+        ctx.arc(bellX, 0, 54, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 107, 94, 0.15)";
+        ctx.fill();
+
+        // Draw Bell Icon with rotation
+        ctx.save();
+        ctx.translate(bellX, 0);
+        ctx.rotate((s.bellAngle * Math.PI) / 180);
+        ctx.fillStyle = COLORS.coral;
+        ctx.beginPath();
+        ctx.moveTo(0, -32);
+        ctx.bezierCurveTo(22, -32, 26, -8, 26, 12);
+        ctx.lineTo(34, 22);
+        ctx.lineTo(-34, 22);
+        ctx.lineTo(-26, 12);
+        ctx.bezierCurveTo(-26, -8, -22, -32, 0, -32);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, 30, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Reminder Text
+        ctx.fillStyle = COLORS.teal;
+        ctx.font = "800 24px 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.fillText(CLINIC_DEMO.toUpperCase(), -nw / 2 + 175, -nh / 2 + 38);
+
+        ctx.fillStyle = COLORS.ink;
+        ctx.font = "800 32px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillText("Reminder: Your appointment is", -nw / 2 + 175, -nh / 2 + 82);
+        ctx.fillText("tomorrow at 11:30 AM", -nw / 2 + 175, -nh / 2 + 126);
+
+        ctx.restore();
+      }
+
+      // Scene 6 Chip: "No missed appointments"
+      drawFloatingChip(ctx, {
+        text: "No missed appointments",
+        icon: "check",
+        iconColor: COLORS.green,
+        x: W / 2,
+        y: 1130,
+        progress: s.chip6,
+        time: state.time,
+        phase: 0.8
+      });
+
+      ctx.restore();
+    }
+
+    function drawScene7(ctx) {
+      const s = state.s7;
+      if (s.alpha <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha = s.alpha;
+
+      drawHighlightedHeadline(ctx, {
+        text: "A simple dashboard for the dentist",
+        highlightPhrase: "simple dashboard",
+        highlightColor: COLORS.teal,
+        baseColor: COLORS.softWhite,
+        y: 130,
+        fontSize: 88,
+        alpha: s.h7Alpha,
+        offsetY: s.h7Y
+      });
+
+      // Laptop Mockup
+      if (s.laptopAlpha > 0.01) {
+        ctx.save();
+        ctx.globalAlpha *= s.laptopAlpha;
+
+        const lx = W / 2;
+        const ly = 1045 + s.laptopY;
+        const lw = 940;
+        const lh = 640;
+
+        ctx.translate(lx, ly);
+
+        // Laptop Drop Shadow
+        ctx.shadowColor = "rgba(3, 10, 18, 0.55)";
+        ctx.shadowBlur = 60;
+        ctx.shadowOffsetY = 28;
+
+        // Screen Lid
+        fillRoundRect(ctx, -lw / 2, -lh / 2, lw, lh, 32, "#101E2E");
+        ctx.shadowColor = "transparent";
+        strokeRoundRect(ctx, -lw / 2, -lh / 2, lw, lh, 32, "rgba(255,255,255,0.22)", 4);
+
+        // Laptop Base / Keyboard Lip
+        fillRoundRect(ctx, -lw / 2 - 42, lh / 2 - 4, lw + 84, 28, { tl: 6, tr: 6, bl: 22, br: 22 }, "#8FA4B8");
+        fillRoundRect(ctx, -90, lh / 2 - 4, 180, 10, 5, "#5E7387");
+
+        // Inner Screen
+        const sx = -lw / 2 + 20;
+        const sy = -lh / 2 + 20;
+        const sw = lw - 40;
+        const sh = lh - 40;
+
+        ctx.save();
+        roundRectPath(ctx, sx, sy, sw, sh, 20);
+        ctx.clip();
+
+        ctx.fillStyle = "#F4F8FB";
+        ctx.fillRect(sx, sy, sw, sh);
+
+        // Left Sidebar (Dashboard, Calendar, Patients, Reminders)
+        const sideW = 220;
+        ctx.fillStyle = "#081C2E";
+        ctx.fillRect(sx, sy, sideW, sh);
+
+        drawToothLogo(ctx, sx + 42, sy + 48, 30, COLORS.teal);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "800 20px 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText("Dentist Admin", sx + 68, sy + 48);
+
+        const navItems = ["Dashboard", "Calendar", "Patients", "Reminders"];
+        navItems.forEach((item, idx) => {
+          const ny = sy + 110 + idx * 64;
+          if (idx === 1) {
+            fillRoundRect(ctx, sx + 14, ny - 22, sideW - 28, 48, 12, COLORS.teal);
+          }
+          ctx.fillStyle = idx === 1 ? "#041E21" : "#9BB4C9";
+          ctx.font = `${idx === 1 ? 800 : 500} 20px 'Plus Jakarta Sans', sans-serif`;
+          ctx.fillText(item, sx + 34, ny + 2);
+        });
+
+        // Main Dashboard Content Area
+        const mx = sx + sideW + 24;
+        const mw = sw - sideW - 48;
+
+        // Top Stat Cards: "Today's bookings 12", "Upcoming 48", "Completed 230"
+        const stats = [
+          { label: "Today's bookings", val: "12", color: COLORS.teal, prog: s.stat1 },
+          { label: "Upcoming", val: "48", color: COLORS.deepBlue, prog: s.stat2 },
+          { label: "Completed", val: "230", color: COLORS.green, prog: s.stat3 }
+        ];
+        const cardW = (mw - 32) / 3;
+        stats.forEach((st, idx) => {
+          if (st.prog <= 0.01) return;
+          ctx.save();
+          ctx.globalAlpha *= st.prog;
+          const cx = mx + idx * (cardW + 16);
+          const cy = sy + 24 + (1 - st.prog) * 20;
+          fillRoundRect(ctx, cx, cy, cardW, 118, 16, "#FFFFFF");
+          strokeRoundRect(ctx, cx, cy, cardW, 118, 16, "rgba(11,60,93,0.08)", 2);
+
+          ctx.fillStyle = COLORS.slate;
+          ctx.font = "700 16px 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = "left";
+          ctx.fillText(st.label, cx + 16, cy + 32);
+
+          ctx.fillStyle = st.color;
+          ctx.font = "800 40px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillText(st.val, cx + 16, cy + 82);
+          ctx.restore();
+        });
+
+        // Calendar Page with Booking Blocks
+        const calY = sy + 162;
+        const calH = sh - 184;
+        fillRoundRect(ctx, mx, calY, mw, calH, 18, "#FFFFFF");
+        strokeRoundRect(ctx, mx, calY, mw, calH, 18, "rgba(11,60,93,0.08)", 2);
+
+        ctx.fillStyle = COLORS.ink;
+        ctx.font = "800 22px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillText("Today's Appointment Schedule", mx + 22, calY + 34);
+
+        // Static Booking Rows
+        const rows = [
+          { time: "10:00 AM", patient: "Priya Patel • Root Canal", tag: "Confirmed", tagCol: "#10B981" },
+          { time: "11:30 AM", patient: "Aarav Sharma • Cleaning", isAnimated: true },
+          { time: "02:00 PM", patient: "Rohan Verma • Braces", tag: "Confirmed", tagCol: "#10B981" },
+          { time: "04:30 PM", patient: "Neha Gupta • Dental Implant", tag: "Confirmed", tagCol: "#10B981" }
+        ];
+
+        rows.forEach((row, idx) => {
+          const ry = calY + 68 + idx * 82;
+          ctx.fillStyle = COLORS.slate;
+          ctx.font = "700 18px 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = "left";
+          ctx.fillText(row.time, mx + 22, ry + 34);
+
+          const bx = mx + 135;
+          const bw = mw - 158;
+
+          if (row.isAnimated) {
+            if (s.newBlockScale <= 0.01) return;
+            ctx.save();
+            ctx.translate(bx + bw / 2, ry + 32);
+            ctx.scale(s.newBlockScale, s.newBlockScale);
+
+            fillRoundRect(ctx, -bw / 2, -28, bw, 62, 14, "#E6FAF8");
+            strokeRoundRect(ctx, -bw / 2, -28, bw, 62, 14, COLORS.teal, 2.5);
+
+            ctx.fillStyle = COLORS.ink;
+            ctx.font = "800 20px 'Plus Jakarta Sans', sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(row.patient, -bw / 2 + 18, 4);
+
+            // Status chip changing "Pending" -> "Confirmed"
+            const isConf = s.statusConfirmed > 0.5;
+            const pillBg = isConf ? "#10B981" : "#F59E0B";
+            const pillText = isConf ? "Confirmed" : "Pending";
+            fillRoundRect(ctx, bw / 2 - 148, -18, 132, 42, 21, pillBg);
+            ctx.fillStyle = "#FFFFFF";
+            ctx.font = "800 17px 'Plus Jakarta Sans', sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(pillText, bw / 2 - 82, 4);
+
+            ctx.restore();
+          } else {
+            fillRoundRect(ctx, bx, ry + 4, bw, 62, 14, "#F4F8FB");
+            ctx.fillStyle = COLORS.ink;
+            ctx.font = "700 19px 'Plus Jakarta Sans', sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(row.patient, bx + 18, ry + 36);
+
+            fillRoundRect(ctx, bx + bw - 148, ry + 14, 132, 42, 21, "rgba(16, 185, 129, 0.15)");
+            ctx.fillStyle = "#059669";
+            ctx.font = "800 17px 'Plus Jakarta Sans', sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(row.tag, bx + bw - 82, ry + 36);
+          }
+        });
+
+        ctx.restore();
+        ctx.restore();
+      }
+
+      // Floating Chips for Scene 7
+      drawFloatingChip(ctx, {
+        text: "Today",
+        icon: "calendar",
+        iconColor: COLORS.teal,
+        x: 240,
+        y: 620,
+        progress: s.chip1,
+        time: state.time,
+        phase: 0.2
+      });
+      drawFloatingChip(ctx, {
+        text: "Upcoming",
+        icon: "clock",
+        iconColor: COLORS.coral,
+        x: 820,
+        y: 640,
+        progress: s.chip2,
+        time: state.time,
+        phase: 1.4
+      });
+      drawFloatingChip(ctx, {
+        text: "Past bookings",
+        icon: "check",
+        iconColor: COLORS.deepBlue,
+        x: 280,
+        y: 1490,
+        progress: s.chip3,
+        time: state.time,
+        phase: 2.5
+      });
+      drawFloatingChip(ctx, {
+        text: "All in one place",
+        icon: "spark",
+        iconColor: COLORS.teal,
+        x: 780,
+        y: 1520,
+        progress: s.chip4,
+        time: state.time,
+        phase: 3.7
+      });
+
+      ctx.restore();
+    }
+
+    function drawScene8(ctx) {
+      const s = state.s8;
+      if (s.alpha <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha = s.alpha;
+
+      drawHighlightedHeadline(ctx, {
+        text: "Everything in one package",
+        highlightPhrase: "one package",
+        highlightColor: COLORS.teal,
+        baseColor: COLORS.softWhite,
+        y: 180,
+        fontSize: 90,
+        alpha: s.h8Alpha,
+        offsetY: s.h8Y
+      });
+
+      const items = [
+        { text: "Online booking website", prog: s.item1 },
+        { text: "Auto reminders", prog: s.item2 },
+        { text: "Calendar dashboard", prog: s.item3 },
+        { text: "All pages + policy pages", prog: s.item4 }
+      ];
+
+      const cardW = 880;
+      const cardH = 185;
+      const startY = 560;
+      const gap = 38;
+
+      items.forEach((it, idx) => {
+        if (it.prog <= 0.01) return;
+        ctx.save();
+        ctx.globalAlpha *= it.prog;
+        const x = (W - cardW) / 2;
+        const y = startY + idx * (cardH + gap) + (1 - it.prog) * 40;
+
+        ctx.shadowColor = "rgba(4, 15, 26, 0.35)";
+        ctx.shadowBlur = 35;
+        ctx.shadowOffsetY = 14;
+
+        fillRoundRect(ctx, x, y, cardW, cardH, 36, "rgba(255, 255, 255, 0.09)");
+        ctx.shadowColor = "transparent";
+        strokeRoundRect(ctx, x, y, cardW, cardH, 36, "rgba(15, 181, 174, 0.45)", 3);
+
+        // Teal Check Circle
+        const cx = x + 98;
+        const cy = y + cardH / 2;
+        drawMiniIcon(ctx, "check", cx, cy, 44, COLORS.teal);
+
+        ctx.fillStyle = COLORS.softWhite;
+        ctx.font = "800 46px 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(it.text, x + 172, cy + 2);
+
+        ctx.restore();
+      });
+
+      ctx.restore();
+    }
+
+    function drawScene9(ctx) {
+      const s = state.s9;
+      if (s.alpha <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha = s.alpha;
+
+      // Tooth Logo + BRAND Large
+      if (s.brandAlpha > 0.01) {
+        ctx.save();
+        ctx.globalAlpha *= s.brandAlpha;
+        ctx.translate(W / 2, 340 + s.brandY);
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 96, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.16)";
+        ctx.fill();
+        drawToothLogo(ctx, 0, 4, 110, "#FFFFFF");
+
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "800 58px 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText(BRAND, 0, 130);
+        ctx.restore();
+      }
+
+      // Headline: "Get your clinic's booking website"
+      drawHighlightedHeadline(ctx, {
+        text: "Get your clinic's booking website",
+        highlightPhrase: "booking website",
+        highlightColor: "#FFE57F",
+        baseColor: "#FFFFFF",
+        y: 660,
+        fontSize: 92,
+        alpha: s.h9Alpha,
+        offsetY: s.h9Y
+      });
+
+      // White Pulsing Button "Contact us →"
+      if (s.ctaAlpha > 0.01) {
+        ctx.save();
+        ctx.globalAlpha *= s.ctaAlpha;
+        const pulse = 1 + Math.sin(state.time * 5.2) * 0.038;
+        ctx.translate(W / 2, 1140 + s.ctaY);
+        ctx.scale(pulse, pulse);
+
+        const bw = 640;
+        const bh = 148;
+        ctx.shadowColor = "rgba(7, 18, 31, 0.38)";
+        ctx.shadowBlur = 45;
+        ctx.shadowOffsetY = 18;
+
+        fillRoundRect(ctx, -bw / 2, -bh / 2, bw, bh, 74, "#FFFFFF");
+        ctx.shadowColor = "transparent";
+
+        ctx.fillStyle = COLORS.deepBlue;
+        ctx.font = "800 54px 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("Contact us →", 0, 2);
+        ctx.restore();
+      }
+
+      // Pill showing CONTACT
+      if (s.contactAlpha > 0.01) {
+        ctx.save();
+        ctx.globalAlpha *= s.contactAlpha;
+        ctx.translate(W / 2, 1370 + s.contactY);
+
+        const pw = 740;
+        const ph = 116;
+        fillRoundRect(ctx, -pw / 2, -ph / 2, pw, ph, 58, "rgba(7, 18, 31, 0.36)");
+        strokeRoundRect(ctx, -pw / 2, -ph / 2, pw, ph, 58, "rgba(255, 255, 255, 0.45)", 3);
+
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "700 42px 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`WhatsApp: ${CONTACT}`, 0, 2);
+        ctx.restore();
+      }
+
+      // Small text: "Message us for a free demo"
+      if (s.subAlpha > 0.01) {
+        ctx.save();
+        ctx.globalAlpha *= s.subAlpha;
+        ctx.fillStyle = "rgba(246, 251, 251, 0.88)";
+        ctx.font = "700 36px 'Plus Jakarta Sans', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("Message us for a free demo", W / 2, 1545);
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    // ============================================================================
+    // MASTER DRAW FRAME FUNCTION
+    // ============================================================================
+    function drawFrame(ctx) {
+      ctx.clearRect(0, 0, W, H);
+      drawBackground(ctx);
+      drawScenes123(ctx);
+      drawScenes456(ctx);
+      drawScene7(ctx);
+      drawScene8(ctx);
+      drawScene9(ctx);
+    }
+
+    // ============================================================================
+    // REAL-TIME PREVIEW LOOP
+    // ============================================================================
+    let isPreviewing = false;
+    let previewRaf = null;
+    let previewStartPerf = 0;
+
+    function stopPreview() {
+      isPreviewing = false;
+      if (previewRaf) cancelAnimationFrame(previewRaf);
+      previewRaf = null;
+      previewBtn.textContent = "▶ Preview";
+    }
+
+    function startPreview() {
+      if (isPreviewing) {
+        stopPreview();
+        statusText.textContent = `Paused at ${tl.time().toFixed(1)}s / ${DURATION}s`;
+        return;
+      }
+      isPreviewing = true;
+      previewBtn.textContent = "⏸ Pause";
+      const startOffset = tl.time() >= DURATION - 0.05 ? 0 : tl.time();
+      previewStartPerf = performance.now() - startOffset * 1000;
+
+      const tick = (now) => {
+        if (!isPreviewing) return;
+        const elapsed = (now - previewStartPerf) / 1000;
+        if (elapsed >= DURATION) {
+          tl.time(DURATION);
+          drawFrame(ctx);
+          stopPreview();
+          statusText.textContent = "Preview complete (55.0s)";
+          return;
+        }
+        tl.time(elapsed);
+        drawFrame(ctx);
+        statusText.textContent = `Previewing ${elapsed.toFixed(1)}s / ${DURATION}.0s`;
+        previewRaf = requestAnimationFrame(tick);
+      };
+      previewRaf = requestAnimationFrame(tick);
+    }
+
+    // ============================================================================
+    // MP4 EXPORT (WEBCODECS + MP4-MUXER WITH MEDIARECORDER FALLBACK)
+    // ============================================================================
+    async function acquireWakeLock() {
+      try {
+        if ("wakeLock" in navigator) {
+          return await navigator.wakeLock.request("screen");
+        }
+      } catch (_) {}
+      return null;
+    }
+
+    function presentExportResult(blob, ext = "mp4", isFallback = false) {
+      const url = URL.createObjectURL(blob);
+      const filename = `dental-booking-promo.${ext}`;
+
+      const tempLink = document.createElement("a");
+      tempLink.href = url;
+      tempLink.download = filename;
+      document.body.appendChild(tempLink);
+      tempLink.click();
+      tempLink.remove();
+
+      downloadAgain.href = url;
+      downloadAgain.download = filename;
+      downloadAgain.style.display = "inline-flex";
+
+      resultVideo.src = url;
+      resultContainer.style.display = "flex";
+
+      statusText.textContent = isFallback
+        ? `Export complete (MediaRecorder fallback: ${filename})`
+        : "Export complete! Downloaded dental-booking-promo.mp4";
+    }
+
+    async function exportWithFallback() {
+      statusText.textContent = "WebCodecs unavailable — using real-time MediaRecorder fallback (55s)...";
+      const stream = canvas.captureStream(FPS);
+      const mimeTypes = [
+        "video/mp4;codecs=avc1",
+        "video/mp4",
+        "video/webm;codecs=vp9",
+        "video/webm"
+      ];
+      const chosenMime = mimeTypes.find((m) => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
+      const recorder = chosenMime
+        ? new MediaRecorder(stream, { mimeType: chosenMime, videoBitsPerSecond: 8_000_000 })
+        : new MediaRecorder(stream);
+
+      const chunks = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      return new Promise((resolve, reject) => {
+        recorder.onerror = (err) => reject(err.error || new Error("MediaRecorder failed"));
+        recorder.onstop = () => {
+          const isMp4 = chosenMime.includes("mp4");
+          const blob = new Blob(chunks, { type: isMp4 ? "video/mp4" : "video/webm" });
+          presentExportResult(blob, isMp4 ? "mp4" : "webm", true);
+          resolve();
+        };
+
+        recorder.start(200);
+        const startPerf = performance.now();
+
+        const step = (now) => {
+          const elapsed = (now - startPerf) / 1000;
+          const clamped = Math.min(DURATION, elapsed);
+          tl.time(clamped);
+          drawFrame(ctx);
+          const pct = Math.min(100, Math.round((clamped / DURATION) * 100));
+          statusText.textContent = `Fallback recording ${pct}% (real-time)...`;
+          if (elapsed < DURATION) {
+            requestAnimationFrame(step);
+          } else {
+            recorder.stop();
+          }
+        };
+        requestAnimationFrame(step);
+      });
+    }
+
+    async function exportMp4() {
+      stopPreview();
+      errorBox.style.display = "none";
+      previewBtn.disabled = true;
+      exportBtn.disabled = true;
+
+      const wakeLock = await acquireWakeLock();
+
+      try {
+        if (typeof VideoEncoder === "undefined" || typeof VideoFrame === "undefined") {
+          await exportWithFallback();
+          return;
+        }
+
+        // Check codec support with exact fallback chain
+        const candidateCodecs = ["avc1.64002A", "avc1.640028", "avc1.4D0028"];
+        let chosenConfig = null;
+
+        for (const codec of candidateCodecs) {
+          const cfg = {
+            codec,
+            width: W,
+            height: H,
+            bitrate: 8_000_000,
+            framerate: FPS
+          };
+          try {
+            const support = await VideoEncoder.isConfigSupported(cfg);
+            if (support && support.supported) {
+              chosenConfig = support.config || cfg;
+              break;
+            }
+          } catch (_) {}
+        }
+
+        if (!chosenConfig) {
+          await exportWithFallback();
+          return;
+        }
+
+        const muxer = new Muxer({
+          target: new ArrayBufferTarget(),
+          video: {
+            codec: "avc",
+            width: W,
+            height: H
+          },
+          fastStart: "in-memory"
+        });
+
+        let encoderFailure = null;
+        const encoder = new VideoEncoder({
+          output: (chunk, meta) => {
+            muxer.addVideoChunk(chunk, meta);
+          },
+          error: (err) => {
+            encoderFailure = err;
+          }
+        });
+
+        encoder.configure(chosenConfig);
+
+        const frameDurationUs = Math.round(1e6 / FPS);
+
+        for (let i = 0; i < TOTAL_FRAMES; i++) {
+          if (encoderFailure) throw encoderFailure;
+
+          tl.time(i / FPS);
+          drawFrame(ctx);
+
+          const timestampUs = Math.round((i * 1e6) / FPS);
+          const frame = new VideoFrame(canvas, {
+            timestamp: timestampUs,
+            duration: frameDurationUs
+          });
+
+          encoder.encode(frame, { keyFrame: i % 30 === 0 });
+          frame.close();
+
+          // Respect encoder backpressure
+          while (encoder.encodeQueueSize > 8) {
+            if (encoderFailure) throw encoderFailure;
+            await new Promise((r) => setTimeout(r, 4));
+          }
+
+          if (i % 10 === 0 || i === TOTAL_FRAMES - 1) {
+            const pct = Math.round(((i + 1) / TOTAL_FRAMES) * 100);
+            statusText.textContent = `Exporting ${pct}%`;
+            await new Promise((r) => setTimeout(r, 0));
+          }
+        }
+
+        statusText.textContent = "Finalizing MP4...";
+        await encoder.flush();
+        if (encoderFailure) throw encoderFailure;
+        encoder.close();
+
+        muxer.finalize();
+        const { buffer } = muxer.target;
+        const blob = new Blob([buffer], { type: "video/mp4" });
+        presentExportResult(blob, "mp4", false);
+      } catch (err) {
+        showError(`Export failed: ${err && err.message ? err.message : String(err)}`);
+        statusText.textContent = "Export encountered an error.";
+      } finally {
+        if (wakeLock) {
+          try { await wakeLock.release(); } catch (_) {}
+        }
+        previewBtn.disabled = false;
+        exportBtn.disabled = false;
+      }
+    }
+
+    // ============================================================================
+    // INITIALIZATION (AWAIT FONTS BEFORE ANY DRAWING OR EXPORT)
+    // ============================================================================
+    async function init() {
+      try {
+        await Promise.all([
+          document.fonts.load("500 32px 'Plus Jakarta Sans'"),
+          document.fonts.load("700 32px 'Plus Jakarta Sans'"),
+          document.fonts.load("800 64px 'Plus Jakarta Sans'")
+        ]);
+        await document.fonts.ready;
+
+        buildTimeline();
+        tl.time(0);
+        drawFrame(ctx);
+
+        previewBtn.disabled = false;
+        exportBtn.disabled = false;
+        statusText.textContent = "Ready • 55s Vertical 1080×1920 @ 30fps";
+
+        previewBtn.addEventListener("click", startPreview);
+        exportBtn.addEventListener("click", exportMp4);
+      } catch (err) {
+        showError(`Initialization failed: ${err && err.message ? err.message : String(err)}`);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
