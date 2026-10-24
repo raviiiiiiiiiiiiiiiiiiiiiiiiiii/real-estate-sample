@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ezsites - Dental Reel Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #050B14;
+      color: #F6FBFB;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 20px;
+      gap: 16px;
+    }
+    .canvas-wrap {
+      position: relative;
+      height: 72vh;
+      aspect-ratio: 9 / 16;
+      max-width: 92vw;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1);
+      background: #07121F;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      background: #0FB5AE;
+      color: #07121F;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 16px;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    button:hover:not(:disabled) { transform: translateY(-2px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.secondary {
+      background: #16263B;
+      color: #F6FBFB;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    #status {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0FB5AE;
+      min-height: 20px;
+      text-align: center;
+    }
+    #error {
+      color: #FF6B5E;
+      font-size: 14px;
+      font-weight: 700;
+      max-width: 500px;
+      text-align: center;
+      display: none;
+    }
+    #resultArea {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      padding: 14px;
+      background: #0D1B2E;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    #resultArea a {
+      color: #0FB5AE;
+      font-weight: 800;
+      text-decoration: underline;
+      font-size: 15px;
+    }
+    #resultVideo {
+      width: 180px;
+      aspect-ratio: 9 / 16;
+      border-radius: 8px;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="canvas-wrap">
+    <canvas id="reelCanvas" width="1080" height="1920"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="previewBtn" class="secondary" disabled>▶ Preview</button>
+    <button id="exportBtn" disabled>⬇ Export MP4</button>
+  </div>
+
+  <div id="status">Loading fonts...</div>
+  <div id="error"></div>
+
+  <div id="resultArea">
+    <a id="downloadLink" href="#" download="ezsites-missed-calls-reel.mp4">Download again</a>
+    <video id="resultVideo" controls playsinline muted loop></video>
+  </div>
+
+  <script type="module">
+    import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm";
+
+    // ==========================================
+    // FILL-INS / CONSTANTS
+    // ==========================================
+    const BRAND = "ezsites";
+    const CONTACT = "+91 8102253186";
+    const CLINIC_DEMO = "Smile Care Dental Clinic";
+    const DURATION = 20;
+    const FPS = 30;
+
+    // True horizontal center of 1080x1920 canvas.
+    // All elements have max width <= 720px so they stay strictly within x=180..900
+    // (comfortably inside the safe box x=80..940 while perfectly centered on screen).
+    const CX = 540;
+
+    // Palette
+    const COLORS = {
+      navy: "#07121F",
+      softWhite: "#F6FBFB",
+      teal: "#0FB5AE",
+      deepBlue: "#0B3C5D",
+      coral: "#FF6B5E",
+      green: "#18C964"
+    };
+
+    const canvas = document.getElementById("reelCanvas");
+    const ctx = canvas.getContext("2d");
+    const previewBtn = document.getElementById("previewBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const statusEl = document.getElementById("status");
+    const errorEl = document.getElementById("error");
+    const resultArea = document.getElementById("resultArea");
+    const downloadLink = document.getElementById("downloadLink");
+    const resultVideo = document.getElementById("resultVideo");
+
+    function showError(msg) {
+      errorEl.style.display = "block";
+      errorEl.textContent = msg;
+      console.error(msg);
+    }
+
+    // ==========================================
+    // STATE OBJECT (Purely driven by GSAP)
+    // ==========================================
+    const state = {
+      bgProgress: 0,     // 0 = dark navy, 1 = soft white
+      outroBgOpacity: 0, // 0 -> 1 for scene 5 gradient
+
+      s1: {
+        opacity: 0,
+        headY: 40,
+        visY: 60,
+        visScale: 0.92,
+        missedProgress: 0, // 0 = ringing, 1 = missed call
+        shake: 0,
+        pulse: 0
+      },
+      s2: {
+        opacity: 0,
+        headY: 40,
+        visY: 60,
+        counter: 1,
+        c1X: 0, c1Alpha: 1,
+        c2X: 0, c2Alpha: 1,
+        c3X: 0, c3Alpha: 1
+      },
+      s3: {
+        opacity: 0,
+        headY: 40,
+        toothScale: 0.5,
+        toothOpacity: 0,
+        ringScale: 0.8
+      },
+      s4: {
+        opacity: 0,
+        headY: 40,
+        visY: 60,
+        chipScale: 0,
+        slotSelect: 0, // 0 -> 1 highlights 10:30 PM
+        confirmed: 0   // 0 -> 1 flips to confirmed view
+      },
+      s5: {
+        opacity: 0,
+        brandY: 30,
+        headY: 40,
+        ctaY: 40,
+        btnPulse: 1
+      }
+    };
+
+    // ==========================================
+    // GSAP MASTER TIMELINE (20.0s exact)
+    // ==========================================
+    const tl = gsap.timeline({ paused: true });
+
+    function buildTimeline() {
+      tl.clear();
+
+      // Anchor exact 20s duration
+      tl.to({}, { duration: DURATION }, 0);
+
+      // --- SCENE 1: 0s to 4s ---
+      tl.fromTo(state.s1, { opacity: 0, headY: 40 }, { opacity: 1, headY: 0, duration: 0.55, ease: "power3.out" }, 0.05);
+      tl.fromTo(state.s1, { visY: 60, visScale: 0.92 }, { visY: 0, visScale: 1, duration: 0.6, ease: "power3.out" }, 0.25);
+
+      // Ringing shake and button pulse (0.3s to 2.4s)
+      tl.to(state.s1, {
+        shake: 1,
+        duration: 0.08,
+        repeat: 24,
+        yoyo: true,
+        ease: "sine.inOut"
+      }, 0.35);
+      tl.set(state.s1, { shake: 0 }, 2.45);
+
+      tl.to(state.s1, {
+        pulse: 1,
+        duration: 0.5,
+        repeat: 3,
+        yoyo: true,
+        ease: "sine.inOut"
+      }, 0.3);
+
+      // Switch to Missed Call at 2.5s
+      tl.to(state.s1, { missedProgress: 1, duration: 0.25, ease: "power2.out" }, 2.5);
+
+      // Exit Scene 1
+      tl.to(state.s1, { opacity: 0, headY: -30, visY: -30, duration: 0.35, ease: "power2.in" }, 3.6);
+
+      // --- SCENE 2: 4s to 8s ---
+      tl.fromTo(state.s2, { opacity: 0, headY: 40, counter: 1 }, { opacity: 1, headY: 0, counter: 1, duration: 0.55, ease: "power3.out" }, 4.0);
+      tl.fromTo(state.s2, { visY: 60 }, { visY: 0, duration: 0.55, ease: "power3.out" }, 4.2);
+
+      // Patient 1 slides right & counter = 1
+      tl.to(state.s2, { c1X: 220, c1Alpha: 0, duration: 0.45, ease: "power2.in" }, 4.75);
+      tl.set(state.s2, { counter: 1 }, 4.75);
+
+      // Patient 2 slides right & counter -> 2
+      tl.to(state.s2, { c2X: 220, c2Alpha: 0, duration: 0.45, ease: "power2.in" }, 5.55);
+      tl.set(state.s2, { counter: 2 }, 5.55);
+
+      // Patient 3 slides right & counter -> 3
+      tl.to(state.s2, { c3X: 220, c3Alpha: 0, duration: 0.45, ease: "power2.in" }, 6.35);
+      tl.set(state.s2, { counter: 3 }, 6.35);
+
+      // Exit Scene 2
+      tl.to(state.s2, { opacity: 0, headY: -30, visY: -30, duration: 0.35, ease: "power2.in" }, 7.6);
+
+      // --- SCENE 3: 8s to 11s (Navy -> Soft White) ---
+      tl.to(state, { bgProgress: 1, duration: 0.5, ease: "power2.inOut" }, 7.85);
+      tl.fromTo(state.s3, { opacity: 0, headY: 40 }, { opacity: 1, headY: 0, duration: 0.55, ease: "power3.out" }, 8.05);
+      tl.fromTo(state.s3,
+        { toothScale: 0.55, toothOpacity: 0, ringScale: 0.7 },
+        { toothScale: 1, toothOpacity: 1, ringScale: 1.08, duration: 0.75, ease: "back.out(1.6)" },
+        8.25
+      );
+      tl.to(state.s3, { toothScale: 1.05, ringScale: 1.15, duration: 1.4, ease: "sine.inOut" }, 9.0);
+
+      // Exit Scene 3
+      tl.to(state.s3, { opacity: 0, headY: -30, toothOpacity: 0, duration: 0.35, ease: "power2.in" }, 10.6);
+
+      // --- SCENE 4: 11s to 16s ---
+      tl.fromTo(state.s4, { opacity: 0, headY: 40 }, { opacity: 1, headY: 0, duration: 0.55, ease: "power3.out" }, 11.0);
+      tl.fromTo(state.s4, { visY: 60 }, { visY: 0, duration: 0.6, ease: "power3.out" }, 11.2);
+      tl.fromTo(state.s4, { chipScale: 0 }, { chipScale: 1, duration: 0.45, ease: "back.out(1.8)" }, 11.45);
+
+      // Select 10:30 PM pill
+      tl.to(state.s4, { slotSelect: 1, duration: 0.35, ease: "power2.out" }, 12.25);
+
+      // Transition to Booking Confirmed
+      tl.to(state.s4, { confirmed: 1, duration: 0.45, ease: "power3.out" }, 13.35);
+
+      // Exit Scene 4
+      tl.to(state.s4, { opacity: 0, headY: -30, visY: -30, duration: 0.35, ease: "power2.in" }, 15.6);
+
+      // --- SCENE 5: 16s to 20s (Teal-to-Blue gradient) ---
+      tl.to(state, { outroBgOpacity: 1, duration: 0.5, ease: "power2.inOut" }, 15.8);
+      tl.fromTo(state.s5,
+        { opacity: 0, brandY: 30, headY: 40, ctaY: 40 },
+        { opacity: 1, brandY: 0, headY: 0, ctaY: 0, duration: 0.65, ease: "power3.out" },
+        16.05
+      );
+      tl.to(state.s5, {
+        btnPulse: 1.04,
+        duration: 0.55,
+        repeat: 5,
+        yoyo: true,
+        ease: "sine.inOut"
+      }, 16.6);
+    }
+
+    // ==========================================
+    // CANVAS 2D DRAWING HELPERS
+    // ==========================================
+    function lerpColor(hexA, hexB, t) {
+      const a = parseInt(hexA.slice(1), 16);
+      const b = parseInt(hexB.slice(1), 16);
+      const r1 = (a >> 16) & 255, g1 = (a >> 8) & 255, b1 = a & 255;
+      const r2 = (b >> 16) & 255, g2 = (b >> 8) & 255, b2 = b & 255;
+      const r = Math.round(r1 + (r2 - r1) * t);
+      const g = Math.round(g1 + (g2 - g1) * t);
+      const bl = Math.round(b1 + (b2 - b1) * t);
+      return `rgb(${r}, ${g}, ${bl})`;
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    }
+
+    // Optical vertical & horizontal centered text using actual bounding box metrics
+    function drawCenteredText(ctx, text, cx, cy, font, color) {
+      ctx.save();
+      ctx.font = font;
+      ctx.fillStyle = color;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      const m = ctx.measureText(text);
+      const ascent = m.actualBoundingBoxAscent ?? 30;
+      const descent = m.actualBoundingBoxDescent ?? 8;
+      const y = cy + (ascent - descent) / 2;
+      ctx.fillText(text, cx, y);
+      ctx.restore();
+    }
+
+    // Multi-line centered headline with multi-word phrase highlighting.
+    // Vertically centers the entire headline block inside the y=400..760 headline zone.
+    function drawHeadlineBlock(ctx, lines, highlights, xCenter, zoneTop, zoneBottom, yOffset, fontSize, baseColor, highlightColor, lineHeight = 1.15) {
+      ctx.save();
+      ctx.font = `800 ${fontSize}px 'Plus Jakarta Sans', sans-serif`;
+      ctx.textBaseline = "alphabetic";
+      ctx.textAlign = "left";
+
+      const step = fontSize * lineHeight;
+      const blockHeight = (lines.length - 1) * step + fontSize * 0.78;
+      const zoneCenterY = (zoneTop + zoneBottom) / 2 + yOffset;
+      const firstBaselineY = zoneCenterY - blockHeight / 2 + fontSize * 0.78;
+
+      const hlLower = highlights.map(h => h.toLowerCase());
+
+      lines.forEach((lineText, idx) => {
+        const baselineY = firstBaselineY + idx * step;
+        const words = lineText.split(" ");
+        const wordColors = new Array(words.length).fill(baseColor);
+
+        const cleanWords = words.map(w => w.replace(/[.,?!]/g, "").toLowerCase());
+
+        hlLower.forEach(phrase => {
+          const pWords = phrase.split(" ");
+          for (let i = 0; i <= cleanWords.length - pWords.length; i++) {
+            let match = true;
+            for (let j = 0; j < pWords.length; j++) {
+              if (cleanWords[i + j] !== pWords[j]) {
+                match = false;
+                break;
+              }
+            }
+            if (match) {
+              for (let j = 0; j < pWords.length; j++) {
+                wordColors[i + j] = highlightColor;
+              }
+            }
+          }
+        });
+
+        // Group adjacent words with identical color into runs for natural kerning
+        const runs = [];
+        for (let i = 0; i < words.length; i++) {
+          if (runs.length > 0 && runs[runs.length - 1].color === wordColors[i]) {
+            runs[runs.length - 1].text += " " + words[i];
+          } else {
+            runs.push({ text: words[i], color: wordColors[i] });
+          }
+        }
+
+        const spaceW = ctx.measureText(" ").width;
+        const runWidths = runs.map(r => ctx.measureText(r.text).width);
+        const totalW = runWidths.reduce((a, b) => a + b, 0) + spaceW * Math.max(0, runs.length - 1);
+
+        let curX = xCenter - totalW / 2;
+        for (let i = 0; i < runs.length; i++) {
+          ctx.fillStyle = runs[i].color;
+          ctx.fillText(runs[i].text, curX, baselineY);
+          curX += runWidths[i] + spaceW;
+        }
+      });
+
+      ctx.restore();
+    }
+
+    // Clean vector tooth icon optically centered at (cx, cy) with size radius s
+    function drawToothIcon(ctx, cx, cy, s, fillStyle) {
+      ctx.save();
+      // Path spans y from -80 to +96 (center is +8), so shift by -8*(s/100) for optical center
+      ctx.translate(cx, cy - 8 * (s / 100));
+      ctx.scale(s / 100, s / 100);
+      ctx.beginPath();
+      ctx.moveTo(0, -68);
+      ctx.bezierCurveTo(-28, -88, -78, -72, -78, -22);
+      ctx.bezierCurveTo(-78, 14, -60, 36, -52, 74);
+      ctx.bezierCurveTo(-46, 102, -24, 102, -16, 66);
+      ctx.bezierCurveTo(-10, 42, -5, 32, 0, 32);
+      ctx.bezierCurveTo(5, 32, 10, 42, 16, 66);
+      ctx.bezierCurveTo(24, 102, 46, 102, 52, 74);
+      ctx.bezierCurveTo(60, 36, 78, 14, 78, -22);
+      ctx.bezierCurveTo(78, -72, 28, -88, 0, -68);
+      ctx.closePath();
+      ctx.fillStyle = fillStyle;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Clean phone mockup
+    function drawPhoneShell(ctx, x, y, w, h, screenBg) {
+      ctx.save();
+      ctx.shadowColor = "rgba(0, 0, 0, 0.35)";
+      ctx.shadowBlur = 45;
+      ctx.shadowOffsetY = 24;
+
+      // Dark outer bezel
+      roundRect(ctx, x, y, w, h, 60);
+      ctx.fillStyle = "#121D2B";
+      ctx.fill();
+
+      ctx.shadowColor = "transparent";
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = "rgba(255,255,255,0.14)";
+      ctx.stroke();
+
+      // Screen area
+      const pad = 16;
+      roundRect(ctx, x + pad, y + pad, w - pad * 2, h - pad * 2, 46);
+      ctx.fillStyle = screenBg;
+      ctx.fill();
+
+      // Top Notch
+      const notchW = 150;
+      const notchH = 26;
+      roundRect(ctx, x + (w - notchW) / 2, y + pad + 12, notchW, notchH, 13);
+      ctx.fillStyle = "#070D15";
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawPhoneHandset(ctx, cx, cy, scale, color, rotation = 0) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rotation);
+      ctx.scale(scale, scale);
+      ctx.fillStyle = color;
+      roundRect(ctx, -22, -10, 44, 14, 7);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(-14, 2, 9, 0, Math.PI * 2);
+      ctx.arc(14, 2, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawAvatarIcon(ctx, cx, cy, r, color) {
+      ctx.save();
+      ctx.fillStyle = color;
+      // Head
+      ctx.beginPath();
+      ctx.arc(cx, cy - r * 0.22, r * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+      // Shoulders
+      ctx.beginPath();
+      ctx.arc(cx, cy + r * 0.62, r * 0.54, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // ==========================================
+    // SCENE DRAWERS
+    // Headline Zone: y = 400 .. 760
+    // Visual Zone:   y = 800 .. 1450
+    // Horizontal Center: CX = 540 (all elements stay inside x = 180 .. 900)
+    // ==========================================
+    function drawScene1(ctx) {
+      const s = state.s1;
+      if (s.opacity <= 0.001) return;
+
+      ctx.save();
+      ctx.globalAlpha = s.opacity;
+
+      // Headline centered in y=400..760
+      drawHeadlineBlock(
+        ctx,
+        ["Missed calls =", "lost patients"],
+        ["lost patients"],
+        CX,
+        400, 760,
+        s.headY,
+        92,
+        COLORS.softWhite,
+        COLORS.coral
+      );
+
+      // Phone visual centered in y=800..1450
+      const pw = 480;
+      const ph = 620;
+      const shakeOffset = Math.sin(s.shake * Math.PI * 2) * 10 * (1 - s.missedProgress);
+      const px = CX - pw / 2 + shakeOffset;
+      const py = 815 + s.visY;
+
+      ctx.save();
+      ctx.translate(CX, py + ph / 2);
+      ctx.scale(s.visScale, s.visScale);
+      ctx.translate(-CX, -(py + ph / 2));
+
+      drawPhoneShell(ctx, px, py, pw, ph, "#0D1B2E");
+
+      // Caller Avatar Circle
+      const avatarY = py + 150;
+      ctx.beginPath();
+      ctx.arc(px + pw / 2, avatarY, 54, 0, Math.PI * 2);
+      ctx.fillStyle = s.missedProgress > 0.5 ? "rgba(255, 107, 94, 0.18)" : "rgba(15, 181, 174, 0.2)";
+      ctx.fill();
+      drawAvatarIcon(
+        ctx,
+        px + pw / 2,
+        avatarY,
+        46,
+        s.missedProgress > 0.5 ? COLORS.coral : COLORS.teal
+      );
+
+      // Caller Name: "New Patient"
+      drawCenteredText(
+        ctx,
+        "New Patient",
+        px + pw / 2,
+        py + 265,
+        "800 44px 'Plus Jakarta Sans', sans-serif",
+        COLORS.softWhite
+      );
+
+      if (s.missedProgress < 0.5) {
+        // Incoming call state
+        drawCenteredText(
+          ctx,
+          "Incoming call...",
+          px + pw / 2,
+          py + 330,
+          "700 36px 'Plus Jakarta Sans', sans-serif",
+          "#94A8BE"
+        );
+
+        // Pulsing Green Accept Button
+        const btnY = py + 475;
+        const pulseRadius = 64 + s.pulse * 22;
+        ctx.beginPath();
+        ctx.arc(px + pw / 2, btnY, pulseRadius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(24, 201, 100, ${0.3 * (1 - s.pulse * 0.5)})`;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(px + pw / 2, btnY, 58, 0, Math.PI * 2);
+        ctx.fillStyle = COLORS.green;
+        ctx.fill();
+
+        drawPhoneHandset(ctx, px + pw / 2, btnY, 1.35, COLORS.softWhite, -0.4);
+      } else {
+        // Missed Call state
+        const pillW = 330;
+        const pillH = 74;
+        const pillX = px + (pw - pillW) / 2;
+        const pillY = py + 315;
+        roundRect(ctx, pillX, pillY, pillW, pillH, 37);
+        ctx.fillStyle = "rgba(255, 107, 94, 0.18)";
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = COLORS.coral;
+        ctx.stroke();
+
+        drawCenteredText(
+          ctx,
+          "Missed call",
+          px + pw / 2,
+          pillY + pillH / 2,
+          "800 38px 'Plus Jakarta Sans', sans-serif",
+          COLORS.coral
+        );
+
+        // Red hung-up icon
+        const btnY = py + 480;
+        ctx.beginPath();
+        ctx.arc(px + pw / 2, btnY, 54, 0, Math.PI * 2);
+        ctx.fillStyle = COLORS.coral;
+        ctx.fill();
+        drawPhoneHandset(ctx, px + pw / 2, btnY, 1.35, COLORS.softWhite, 0);
+      }
+
+      ctx.restore();
+      ctx.restore();
+    }
+
+    function drawScene2(ctx) {
+      const s = state.s2;
+      if (s.opacity <= 0.001) return;
+
+      ctx.save();
+      ctx.globalAlpha = s.opacity;
+
+      // Headline centered in y=400..760
+      drawHeadlineBlock(
+        ctx,
+        ["3 patients booked", "elsewhere"],
+        ["3", "elsewhere"],
+        CX,
+        400, 760,
+        s.headY,
+        92,
+        COLORS.softWhite,
+        COLORS.coral
+      );
+
+      // Visual Zone y=800..1450: Large Coral Counter + 3 Stacked Patient Avatars
+      const countNum = Math.max(1, Math.min(3, Math.round(s.counter)));
+      drawCenteredText(
+        ctx,
+        String(countNum),
+        CX,
+        875 + s.visY,
+        "800 132px 'Plus Jakarta Sans', sans-serif",
+        COLORS.coral
+      );
+
+      const rows = [
+        { label: "Patient 1", offsetX: s.c1X, alpha: s.c1Alpha },
+        { label: "Patient 2", offsetX: s.c2X, alpha: s.c2Alpha },
+        { label: "Patient 3", offsetX: s.c3X, alpha: s.c3Alpha }
+      ];
+
+      const cardW = 640;
+      const cardH = 122;
+      const startY = 985 + s.visY;
+      const gap = 24;
+
+      rows.forEach((r, idx) => {
+        if (r.alpha <= 0.01) return;
+        ctx.save();
+        ctx.globalAlpha = s.opacity * r.alpha;
+        const rx = CX - cardW / 2 + r.offsetX;
+        const ry = startY + idx * (cardH + gap);
+        const rowCy = ry + cardH / 2;
+
+        roundRect(ctx, rx, ry, cardW, cardH, 32);
+        ctx.fillStyle = "#102238";
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.stroke();
+
+        // Avatar circle on left
+        const avCx = rx + 72;
+        ctx.beginPath();
+        ctx.arc(avCx, rowCy, 38, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 107, 94, 0.2)";
+        ctx.fill();
+        drawAvatarIcon(ctx, avCx, rowCy, 32, COLORS.coral);
+
+        // Patient title (optically centered on rowCy)
+        ctx.font = "800 42px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillStyle = COLORS.softWhite;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        const m = ctx.measureText(r.label);
+        const textY = rowCy + ((m.actualBoundingBoxAscent ?? 30) - (m.actualBoundingBoxDescent ?? 8)) / 2;
+        ctx.fillText(r.label, rx + 136, textY);
+
+        // Clean vector right arrow centered at (rx + cardW - 56, rowCy)
+        const ax = rx + cardW - 56;
+        ctx.beginPath();
+        ctx.moveTo(ax - 16, rowCy);
+        ctx.lineTo(ax + 12, rowCy);
+        ctx.moveTo(ax + 2, rowCy - 12);
+        ctx.lineTo(ax + 14, rowCy);
+        ctx.lineTo(ax + 2, rowCy + 12);
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = COLORS.coral;
+        ctx.stroke();
+
+        ctx.restore();
+      });
+
+      ctx.restore();
+    }
+
+    function drawScene3(ctx) {
+      const s = state.s3;
+      if (s.opacity <= 0.001) return;
+
+      ctx.save();
+      ctx.globalAlpha = s.opacity;
+
+      // Headline centered in y=400..760
+      drawHeadlineBlock(
+        ctx,
+        ["What if they could", "book themselves?"],
+        ["book themselves"],
+        CX,
+        400, 760,
+        s.headY,
+        90,
+        COLORS.deepBlue,
+        COLORS.teal
+      );
+
+      // Large Teal Tooth Visual centered in y=800..1450 (cy = 1125)
+      const cy = 1125;
+
+      ctx.save();
+      ctx.globalAlpha = s.opacity * s.toothOpacity;
+
+      // Soft outer halo
+      ctx.beginPath();
+      ctx.arc(CX, cy, 235 * s.ringScale, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(15, 181, 174, 0.10)";
+      ctx.fill();
+
+      // Main circle backdrop
+      ctx.beginPath();
+      ctx.arc(CX, cy, 180 * s.toothScale, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(15, 181, 174, 0.18)";
+      ctx.fill();
+
+      // Tooth icon optically centered
+      drawToothIcon(ctx, CX, cy, 120 * s.toothScale, COLORS.teal);
+
+      ctx.restore();
+      ctx.restore();
+    }
+
+    function drawScene4(ctx) {
+      const s = state.s4;
+      if (s.opacity <= 0.001) return;
+
+      ctx.save();
+      ctx.globalAlpha = s.opacity;
+
+      // Headline centered in y=400..700
+      drawHeadlineBlock(
+        ctx,
+        ["Book anytime.", "Even at 10 PM."],
+        ["10 PM"],
+        CX,
+        400, 680,
+        s.headY,
+        92,
+        COLORS.deepBlue,
+        COLORS.teal
+      );
+
+      // Single Floating Chip: "24/7 booking" (40px text, centered at y=735, no overlap)
+      if (s.chipScale > 0.01) {
+        ctx.save();
+        const chipW = 340;
+        const chipH = 72;
+        const chipX = CX - chipW / 2;
+        const chipY = 700;
+        ctx.translate(CX, chipY + chipH / 2);
+        ctx.scale(s.chipScale, s.chipScale);
+        ctx.translate(-CX, -(chipY + chipH / 2));
+
+        roundRect(ctx, chipX, chipY, chipW, chipH, 36);
+        ctx.fillStyle = COLORS.deepBlue;
+        ctx.fill();
+
+        drawCenteredText(
+          ctx,
+          "24/7 booking",
+          CX,
+          chipY + chipH / 2,
+          "800 40px 'Plus Jakarta Sans', sans-serif",
+          COLORS.softWhite
+        );
+        ctx.restore();
+      }
+
+      // Phone Mockup inside y=805..1445 (width 640 -> x=220..860, safe inside 80..940)
+      const pw = 640;
+      const ph = 635;
+      const px = CX - pw / 2;
+      const py = 810 + s.visY;
+
+      drawPhoneShell(ctx, px, py, pw, ph, "#FFFFFF");
+
+      // Clinic Header inside Phone
+      drawCenteredText(
+        ctx,
+        CLINIC_DEMO,
+        CX,
+        py + 108,
+        "800 38px 'Plus Jakarta Sans', sans-serif",
+        COLORS.deepBlue
+      );
+
+      // Divider line
+      ctx.beginPath();
+      ctx.moveTo(px + 48, py + 154);
+      ctx.lineTo(px + pw - 48, py + 154);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#E3EEF2";
+      ctx.stroke();
+
+      if (s.confirmed < 0.5) {
+        // 2x2 Time-slot pills centered inside phone body
+        const slots = [
+          { time: "09:00 AM", highlight: false },
+          { time: "02:00 PM", highlight: false },
+          { time: "06:00 PM", highlight: false },
+          { time: "10:30 PM", highlight: true }
+        ];
+
+        const pillW = 256;
+        const pillH = 112;
+        const gapX = 28;
+        const gapY = 28;
+        const gridStartX = CX - (pillW * 2 + gapX) / 2;
+        const gridStartY = py + 225;
+
+        slots.forEach((slot, idx) => {
+          const col = idx % 2;
+          const row = Math.floor(idx / 2);
+          const sx = gridStartX + col * (pillW + gapX);
+          const sy = gridStartY + row * (pillH + gapY);
+
+          const isSelected = slot.highlight && s.slotSelect > 0.2;
+          roundRect(ctx, sx, sy, pillW, pillH, 26);
+          ctx.fillStyle = isSelected ? COLORS.teal : "#EDF5F7";
+          ctx.fill();
+
+          drawCenteredText(
+            ctx,
+            slot.time,
+            sx + pillW / 2,
+            sy + pillH / 2,
+            "800 38px 'Plus Jakarta Sans', sans-serif",
+            isSelected ? "#FFFFFF" : COLORS.deepBlue
+          );
+        });
+      } else {
+        // Booking Confirmed State centered in lower phone body
+        const cy = py + 315;
+
+        ctx.beginPath();
+        ctx.arc(CX, cy, 80, 0, Math.PI * 2);
+        ctx.fillStyle = COLORS.green;
+        ctx.fill();
+
+        // White Checkmark
+        ctx.beginPath();
+        ctx.moveTo(CX - 32, cy + 2);
+        ctx.lineTo(CX - 8, cy + 26);
+        ctx.lineTo(CX + 36, cy - 20);
+        ctx.lineWidth = 14;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.stroke();
+
+        drawCenteredText(
+          ctx,
+          "Booking confirmed",
+          CX,
+          py + 465,
+          "800 44px 'Plus Jakarta Sans', sans-serif",
+          COLORS.deepBlue
+        );
+
+        drawCenteredText(
+          ctx,
+          "10:30 PM",
+          CX,
+          py + 530,
+          "700 38px 'Plus Jakarta Sans', sans-serif",
+          COLORS.teal
+        );
+      }
+
+      ctx.restore();
+    }
+
+    function drawScene5(ctx) {
+      const s = state.s5;
+      if (s.opacity <= 0.001) return;
+
+      ctx.save();
+      ctx.globalAlpha = s.opacity;
+
+      // 1) Tooth Logo + BRAND Wordmark ("ezsites") dynamically measured & centered at CX
+      const brandCy = 415 + s.brandY;
+      ctx.save();
+      ctx.font = "800 92px 'Plus Jakarta Sans', sans-serif";
+      const textMetrics = ctx.measureText(BRAND);
+      const textW = textMetrics.width;
+      const badgeSize = 112;
+      const gap = 28;
+      const totalGroupW = badgeSize + gap + textW;
+      const startX = CX - totalGroupW / 2;
+
+      // Rounded white badge for tooth
+      roundRect(ctx, startX, brandCy - badgeSize / 2, badgeSize, badgeSize, 28);
+      ctx.fillStyle = COLORS.softWhite;
+      ctx.fill();
+      drawToothIcon(ctx, startX + badgeSize / 2, brandCy, 46, COLORS.teal);
+
+      // Brand wordmark optically aligned with badge center
+      ctx.fillStyle = COLORS.softWhite;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      const ascent = textMetrics.actualBoundingBoxAscent ?? 66;
+      const descent = textMetrics.actualBoundingBoxDescent ?? 14;
+      ctx.fillText(BRAND, startX + badgeSize + gap, brandCy + (ascent - descent) / 2);
+      ctx.restore();
+
+      // 2) Headline: "Get your clinic's booking website" centered in y=540..840
+      drawHeadlineBlock(
+        ctx,
+        ["Get your clinic's", "booking website"],
+        [],
+        CX,
+        540, 840,
+        s.headY,
+        90,
+        COLORS.softWhite,
+        COLORS.softWhite
+      );
+
+      // 3) White pulsing button: "Message us on WhatsApp" (width 720 -> x=180..900, safe inside 80..940)
+      const btnW = 720;
+      const btnH = 136;
+      const btnY = 960 + s.ctaY;
+
+      ctx.save();
+      ctx.translate(CX, btnY + btnH / 2);
+      ctx.scale(s.btnPulse, s.btnPulse);
+      ctx.translate(-CX, -(btnY + btnH / 2));
+
+      ctx.shadowColor = "rgba(0, 0, 0, 0.28)";
+      ctx.shadowBlur = 35;
+      ctx.shadowOffsetY = 16;
+
+      roundRect(ctx, CX - btnW / 2, btnY, btnW, btnH, 68);
+      ctx.fillStyle = COLORS.softWhite;
+      ctx.fill();
+
+      ctx.shadowColor = "transparent";
+      drawCenteredText(
+        ctx,
+        "Message us on WhatsApp",
+        CX,
+        btnY + btnH / 2,
+        "800 44px 'Plus Jakarta Sans', sans-serif",
+        COLORS.deepBlue
+      );
+      ctx.restore();
+
+      // 4) Contact Pill below button: CONTACT (centered at CX, y=1160..1264)
+      const pillW = 540;
+      const pillH = 104;
+      const pillY = 1160 + s.ctaY;
+
+      roundRect(ctx, CX - pillW / 2, pillY, pillW, pillH, 52);
+      ctx.fillStyle = "rgba(7, 18, 31, 0.35)";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(246, 251, 251, 0.4)";
+      ctx.stroke();
+
+      drawCenteredText(
+        ctx,
+        CONTACT,
+        CX,
+        pillY + pillH / 2,
+        "800 44px 'Plus Jakarta Sans', sans-serif",
+        COLORS.softWhite
+      );
+
+      ctx.restore();
+    }
+
+    // ==========================================
+    // MASTER DRAW FRAME
+    // ==========================================
+    function drawFrame(ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Base background color (interpolates Navy -> Soft White)
+      ctx.fillStyle = lerpColor(COLORS.navy, COLORS.softWhite, state.bgProgress);
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Scene 5 Teal-to-Blue gradient overlay
+      if (state.outroBgOpacity > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.outroBgOpacity;
+        const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        grad.addColorStop(0, COLORS.teal);
+        grad.addColorStop(1, COLORS.deepBlue);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+
+      // Render active scene layers
+      drawScene1(ctx);
+      drawScene2(ctx);
+      drawScene3(ctx);
+      drawScene4(ctx);
+      drawScene5(ctx);
+    }
+
+    // ==========================================
+    // PREVIEW PLAYBACK (Real-Time RAF)
+    // ==========================================
+    let previewRaf = null;
+    let isExporting = false;
+
+    function stopPreview() {
+      if (previewRaf) {
+        cancelAnimationFrame(previewRaf);
+        previewRaf = null;
+      }
+      previewBtn.textContent = "▶ Preview";
+    }
+
+    function startPreview() {
+      if (isExporting) return;
+      if (previewRaf) {
+        stopPreview();
+        return;
+      }
+      errorEl.style.display = "none";
+      previewBtn.textContent = "⏹ Stop";
+      const startTime = performance.now();
+
+      function tick(now) {
+        const elapsed = (now - startTime) / 1000;
+        const clamped = Math.min(elapsed, DURATION);
+        tl.time(clamped);
+        drawFrame(ctx);
+        statusEl.textContent = `Previewing: ${clamped.toFixed(1)}s / ${DURATION}s`;
+
+        if (elapsed < DURATION) {
+          previewRaf = requestAnimationFrame(tick);
+        } else {
+          stopPreview();
+          statusEl.textContent = "Preview finished.";
+        }
+      }
+
+      previewRaf = requestAnimationFrame(tick);
+    }
+
+    // ==========================================
+    // EXPORT MP4 (WebCodecs + mp4-muxer, Fallback MediaRecorder)
+    // ==========================================
+    async function acquireWakeLock() {
+      try {
+        if ("wakeLock" in navigator) {
+          return await navigator.wakeLock.request("screen");
+        }
+      } catch (_) {}
+      return null;
+    }
+
+    function presentOutputBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      downloadLink.href = url;
+      downloadLink.download = filename;
+      resultVideo.src = url;
+      resultArea.style.display = "flex";
+
+      const tempA = document.createElement("a");
+      tempA.href = url;
+      tempA.download = filename;
+      document.body.appendChild(tempA);
+      tempA.click();
+      tempA.remove();
+    }
+
+    async function exportWithFallbackRecorder() {
+      statusEl.textContent = "WebCodecs unavailable — using real-time fallback recorder...";
+      const stream = canvas.captureStream(FPS);
+      const mimeTypes = [
+        "video/mp4;codecs=avc1",
+        "video/mp4",
+        "video/webm;codecs=vp9",
+        "video/webm"
+      ];
+      const chosenMime = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || "";
+      const recorder = new MediaRecorder(stream, chosenMime ? { mimeType: chosenMime, videoBitsPerSecond: 8_000_000 } : undefined);
+      const chunks = [];
+
+      recorder.ondataavailable = e => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      return new Promise((resolve, reject) => {
+        recorder.onerror = e => reject(e.error || new Error("MediaRecorder error"));
+        recorder.onstop = () => {
+          const isMp4 = chosenMime.includes("mp4");
+          const blob = new Blob(chunks, { type: isMp4 ? "video/mp4" : "video/webm" });
+          const ext = isMp4 ? "mp4" : "webm";
+          presentOutputBlob(blob, `ezsites-missed-calls-reel.${ext}`);
+          statusEl.textContent = "Export complete (fallback recorder)!";
+          resolve();
+        };
+
+        recorder.start();
+        const start = performance.now();
+
+        function step(now) {
+          const elapsed = (now - start) / 1000;
+          const t = Math.min(elapsed, DURATION);
+          tl.time(t);
+          drawFrame(ctx);
+          const pct = Math.round((t / DURATION) * 100);
+          statusEl.textContent = `Fallback recording: ${pct}%`;
+
+          if (elapsed < DURATION) {
+            requestAnimationFrame(step);
+          } else {
+            recorder.stop();
+          }
+        }
+        requestAnimationFrame(step);
+      });
+    }
+
+    async function exportMP4() {
+      if (isExporting) return;
+      stopPreview();
+      isExporting = true;
+      previewBtn.disabled = true;
+      exportBtn.disabled = true;
+      errorEl.style.display = "none";
+      resultArea.style.display = "none";
+
+      const wakeLock = await acquireWakeLock();
+
+      try {
+        if (typeof VideoEncoder === "undefined" || typeof VideoFrame === "undefined") {
+          await exportWithFallbackRecorder();
+          return;
+        }
+
+        const candidateCodecs = ["avc1.64002A", "avc1.640028", "avc1.4D0028"];
+        let selectedConfig = null;
+
+        for (const codec of candidateCodecs) {
+          const cfg = {
+            codec,
+            width: 1080,
+            height: 1920,
+            bitrate: 8_000_000,
+            framerate: FPS
+          };
+          const support = await VideoEncoder.isConfigSupported(cfg);
+          if (support.supported) {
+            selectedConfig = cfg;
+            break;
+          }
+        }
+
+        if (!selectedConfig) {
+          await exportWithFallbackRecorder();
+          return;
+        }
+
+        const target = new ArrayBufferTarget();
+        const muxer = new Muxer({
+          target,
+          video: {
+            codec: "avc",
+            width: 1080,
+            height: 1920
+          },
+          fastStart: "in-memory"
+        });
+
+        let encoderError = null;
+        const encoder = new VideoEncoder({
+          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+          error: err => { encoderError = err; }
+        });
+
+        encoder.configure(selectedConfig);
+
+        const totalFrames = DURATION * FPS;
+        const frameDurationUs = Math.round(1e6 / FPS);
+
+        for (let i = 0; i < totalFrames; i++) {
+          if (encoderError) throw encoderError;
+
+          const t = i / FPS;
+          tl.time(t);
+          drawFrame(ctx);
+
+          const timestampUs = Math.round((i * 1e6) / FPS);
+          const frame = new VideoFrame(canvas, {
+            timestamp: timestampUs,
+            duration: frameDurationUs
+          });
+
+          const isKeyFrame = i % 30 === 0;
+          encoder.encode(frame, { keyFrame: isKeyFrame });
+          frame.close();
+
+          while (encoder.encodeQueueSize > 8) {
+            if (encoderError) throw encoderError;
+            await new Promise(r => setTimeout(r, 4));
+          }
+
+          if (i % 10 === 0 || i === totalFrames - 1) {
+            const pct = Math.round(((i + 1) / totalFrames) * 100);
+            statusEl.textContent = `Exporting ${pct}%`;
+            await new Promise(r => setTimeout(r, 0));
+          }
+        }
+
+        await encoder.flush();
+        if (encoderError) throw encoderError;
+        encoder.close();
+        muxer.finalize();
+
+        const buffer = target.buffer;
+        const blob = new Blob([buffer], { type: "video/mp4" });
+        presentOutputBlob(blob, "ezsites-missed-calls-reel.mp4");
+        statusEl.textContent = "Export complete! MP4 downloaded.";
+      } catch (err) {
+        showError(`Export failed: ${err.message || err}`);
+        statusEl.textContent = "Export encountered an error.";
+      } finally {
+        if (wakeLock) {
+          try { await wakeLock.release(); } catch (_) {}
+        }
+        isExporting = false;
+        previewBtn.disabled = false;
+        exportBtn.disabled = false;
+      }
+    }
+
+    // ==========================================
+    // INITIALIZATION (Font Loading & First Render)
+    // ==========================================
+    async function init() {
+      try {
+        await Promise.all([
+          document.fonts.load("500 40px 'Plus Jakarta Sans'"),
+          document.fonts.load("700 40px 'Plus Jakarta Sans'"),
+          document.fonts.load("800 92px 'Plus Jakarta Sans'")
+        ]);
+        await document.fonts.ready;
+
+        buildTimeline();
+        tl.time(0.8);
+        drawFrame(ctx);
+
+        previewBtn.disabled = false;
+        exportBtn.disabled = false;
+        statusEl.textContent = "Ready — Click Preview or Export MP4";
+
+        previewBtn.addEventListener("click", startPreview);
+        exportBtn.addEventListener("click", exportMP4);
+      } catch (err) {
+        showError(`Initialization error: ${err.message || err}`);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
