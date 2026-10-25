@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ezsites - 3 Reasons Reel Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #040B14;
+      color: #F6FBFB;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      gap: 14px;
+    }
+    .canvas-wrap {
+      position: relative;
+      height: min(74vh, 760px);
+      aspect-ratio: 9 / 16;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      background: #07121F;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      background: #0FB5AE;
+      color: #07121F;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 15px;
+      border: none;
+      padding: 12px 22px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+    }
+    button:hover:not(:disabled) { transform: translateY(-1px); background: #14cec6; }
+    button:active:not(:disabled) { transform: translateY(0); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    button.secondary {
+      background: #132840;
+      color: #F6FBFB;
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+    button.secondary:hover:not(:disabled) { background: #1B3757; }
+    #status {
+      font-size: 14px;
+      font-weight: 500;
+      color: #98B1C4;
+      min-height: 20px;
+      text-align: center;
+    }
+    #errorBox {
+      color: #FF6B5E;
+      font-size: 14px;
+      max-width: 520px;
+      text-align: center;
+      display: none;
+      background: rgba(255, 107, 94, 0.12);
+      border: 1px solid rgba(255, 107, 94, 0.35);
+      padding: 10px 14px;
+      border-radius: 10px;
+    }
+    #resultArea {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    #resultArea a {
+      color: #0FB5AE;
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: underline;
+    }
+    #resultVideo {
+      width: 180px;
+      aspect-ratio: 9 / 16;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="canvas-wrap">
+    <canvas id="reelCanvas" width="1080" height="1920"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="previewBtn">▶ Preview</button>
+    <button id="exportBtn" class="secondary">⬇ Export MP4</button>
+  </div>
+
+  <div id="status">Loading fonts...</div>
+  <div id="errorBox"></div>
+
+  <div id="resultArea">
+    <a id="downloadLink" href="#" download="ezsites-3-reasons-reel.mp4">Download again</a>
+    <video id="resultVideo" controls playsinline></video>
+  </div>
+
+  <script type="module">
+    import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm";
+
+    // ==========================================
+    // FILL-IN CONSTANTS
+    // ==========================================
+    const BRAND = "ezsites";
+    const CONTACT = "+91 8102253186";
+    const CLINIC_DEMO = "Smile Care Dental Clinic";
+    const DURATION = 20;
+    const FPS = 30;
+    const WIDTH = 1080;
+    const HEIGHT = 1920;
+
+    // Palette
+    const COL_NAVY = "#07121F";
+    const COL_TEAL = "#0FB5AE";
+    const COL_BLUE = "#0B3C5D";
+    const COL_WHITE = "#F6FBFB";
+    const COL_CORAL = "#FF6B5E";
+    const COL_GREY = "#6D8299";
+
+    const canvas = document.getElementById("reelCanvas");
+    const ctx = canvas.getContext("2d");
+    const previewBtn = document.getElementById("previewBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const statusEl = document.getElementById("status");
+    const errorBox = document.getElementById("errorBox");
+    const resultArea = document.getElementById("resultArea");
+    const downloadLink = document.getElementById("downloadLink");
+    const resultVideo = document.getElementById("resultVideo");
+
+    function showError(msg) {
+      errorBox.style.display = "block";
+      errorBox.textContent = msg;
+    }
+    function clearError() {
+      errorBox.style.display = "none";
+      errorBox.textContent = "";
+    }
+
+    // ==========================================
+    // SOUND EFFECTS (Web Audio API)
+    // ==========================================
+    const SFX_CUES = [
+      // SCENE 1
+      { t: 0.2, type: "whoosh" },
+      { t: 0.8, type: "pop" },
+      { t: 1.8, type: "pop" },
+      // SCENE 2
+      { t: 4.0, type: "whoosh" },
+      { t: 4.4, type: "tick" },
+      { t: 4.7, type: "pop" },
+      { t: 6.1, type: "thud" },
+      // SCENE 3
+      { t: 8.0, type: "whoosh" },
+      { t: 8.4, type: "tick" },
+      { t: 8.7, type: "pop" },
+      { t: 10.1, type: "mute-ding" },
+      // SCENE 4
+      { t: 12.0, type: "whoosh" },
+      { t: 12.4, type: "tick" },
+      { t: 12.9, type: "type" },
+      { t: 13.1, type: "type" },
+      { t: 13.3, type: "type" },
+      { t: 13.5, type: "type" },
+      { t: 13.7, type: "type" },
+      { t: 14.6, type: "empty-ping" },
+      // SCENE 5
+      { t: 16.0, type: "whoosh" },
+      { t: 16.4, type: "pop" },
+      { t: 17.0, type: "chime" },
+      { t: 17.4, type: "chime" },
+      { t: 17.8, type: "chime" },
+      { t: 18.4, type: "pop" },
+      { t: 18.9, type: "final-chime" }
+    ];
+
+    function createNoiseBuffer(audioCtx, durationSec) {
+      const length = Math.ceil(audioCtx.sampleRate * durationSec);
+      const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < length; i++) {
+        // Deterministic pseudo-random so preview and offline export match closely
+        const x = Math.sin(i * 12.9898 + durationSec * 78.233) * 43758.5453;
+        data[i] = (x - Math.floor(x)) * 2 - 1;
+      }
+      return buffer;
+    }
+
+    function createMasterChain(audioCtx, destinationNode) {
+      const compressor = audioCtx.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-12, 0);
+      compressor.knee.setValueAtTime(10, 0);
+      compressor.ratio.setValueAtTime(8, 0);
+      compressor.attack.setValueAtTime(0.003, 0);
+      compressor.release.setValueAtTime(0.15, 0);
+
+      const masterGain = audioCtx.createGain();
+      masterGain.gain.setValueAtTime(0.25, 0);
+
+      masterGain.connect(compressor);
+      compressor.connect(destinationNode || audioCtx.destination);
+      return masterGain;
+    }
+
+    function scheduleCue(audioCtx, outNode, type, t) {
+      const eps = 0.0001;
+
+      if (type === "whoosh") {
+        const dur = 0.35;
+        const src = audioCtx.createBufferSource();
+        src.buffer = createNoiseBuffer(audioCtx, dur);
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.Q.setValueAtTime(2.2, t);
+        filter.frequency.setValueAtTime(400, t);
+        filter.frequency.exponentialRampToValueAtTime(2500, t + dur);
+
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(eps, t);
+        g.gain.linearRampToValueAtTime(0.55, t + 0.1);
+        g.gain.exponentialRampToValueAtTime(eps, t + dur);
+
+        src.connect(filter);
+        filter.connect(g);
+        g.connect(outNode);
+        src.start(t);
+        src.stop(t + dur);
+      }
+      else if (type === "pop") {
+        const dur = 0.12;
+        const osc = audioCtx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(700, t);
+        osc.frequency.exponentialRampToValueAtTime(250, t + dur);
+
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(eps, t);
+        g.gain.linearRampToValueAtTime(0.75, t + 0.012);
+        g.gain.exponentialRampToValueAtTime(eps, t + dur);
+
+        osc.connect(g);
+        g.connect(outNode);
+        osc.start(t);
+        osc.stop(t + dur);
+      }
+      else if (type === "tick") {
+        const dur = 0.05;
+        const osc = audioCtx.createOscillator();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(1200, t);
+
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(eps, t);
+        g.gain.linearRampToValueAtTime(0.55, t + 0.005);
+        g.gain.exponentialRampToValueAtTime(eps, t + dur);
+
+        osc.connect(g);
+        g.connect(outNode);
+        osc.start(t);
+        osc.stop(t + dur);
+      }
+      else if (type === "type") {
+        const dur = 0.03;
+        const src = audioCtx.createBufferSource();
+        src.buffer = createNoiseBuffer(audioCtx, dur);
+
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.frequency.setValueAtTime(1800, t);
+        filter.Q.setValueAtTime(3.0, t);
+
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(eps, t);
+        g.gain.linearRampToValueAtTime(0.45, t + 0.004);
+        g.gain.exponentialRampToValueAtTime(eps, t + dur);
+
+        src.connect(filter);
+        filter.connect(g);
+        g.connect(outNode);
+        src.start(t);
+        src.stop(t + dur);
+      }
+      else if (type === "thud") {
+        const dur = 0.3;
+        const osc = audioCtx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(90, t);
+        osc.frequency.exponentialRampToValueAtTime(50, t + dur);
+
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(eps, t);
+        g.gain.linearRampToValueAtTime(0.95, t + 0.015);
+        g.gain.exponentialRampToValueAtTime(eps, t + dur);
+
+        osc.connect(g);
+        g.connect(outNode);
+        osc.start(t);
+        osc.stop(t + dur);
+
+        // Short low-passed noise burst
+        const nDur = 0.1;
+        const src = audioCtx.createBufferSource();
+        src.buffer = createNoiseBuffer(audioCtx, nDur);
+        const lp = audioCtx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.setValueAtTime(320, t);
+        const ng = audioCtx.createGain();
+        ng.gain.setValueAtTime(eps, t);
+        ng.gain.linearRampToValueAtTime(0.5, t + 0.01);
+        ng.gain.exponentialRampToValueAtTime(eps, t + nDur);
+
+        src.connect(lp);
+        lp.connect(ng);
+        ng.connect(outNode);
+        src.start(t);
+        src.stop(t + nDur);
+      }
+      else if (type === "mute-ding") {
+        const dur = 0.5;
+        const osc = audioCtx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(660, t);
+
+        const lp = audioCtx.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.setValueAtTime(900, t);
+
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(eps, t);
+        g.gain.linearRampToValueAtTime(0.7, t + 0.012);
+        g.gain.exponentialRampToValueAtTime(eps, t + dur);
+
+        osc.connect(lp);
+        lp.connect(g);
+        g.connect(outNode);
+        osc.start(t);
+        osc.stop(t + dur);
+      }
+      else if (type === "empty-ping") {
+        // Two-note descending ping: 520 Hz then 390 Hz, 0.35s total
+        const notes = [
+          { freq: 520, start: 0, len: 0.16 },
+          { freq: 390, start: 0.15, len: 0.20 }
+        ];
+        notes.forEach(n => {
+          const osc = audioCtx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(n.freq, t + n.start);
+
+          const g = audioCtx.createGain();
+          g.gain.setValueAtTime(eps, t + n.start);
+          g.gain.linearRampToValueAtTime(0.6, t + n.start + 0.01);
+          g.gain.exponentialRampToValueAtTime(eps, t + n.start + n.len);
+
+          osc.connect(g);
+          g.connect(outNode);
+          osc.start(t + n.start);
+          osc.stop(t + n.start + n.len);
+        });
+      }
+      else if (type === "chime") {
+        // Bright success chime: 880 Hz then 1320 Hz, 0.4s decay
+        const notes = [
+          { freq: 880, start: 0, len: 0.25 },
+          { freq: 1320, start: 0.08, len: 0.32 }
+        ];
+        notes.forEach(n => {
+          const osc = audioCtx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(n.freq, t + n.start);
+
+          const g = audioCtx.createGain();
+          g.gain.setValueAtTime(eps, t + n.start);
+          g.gain.linearRampToValueAtTime(0.6, t + n.start + 0.01);
+          g.gain.exponentialRampToValueAtTime(eps, t + n.start + n.len);
+
+          osc.connect(g);
+          g.connect(outNode);
+          osc.start(t + n.start);
+          osc.stop(t + n.start + n.len);
+        });
+      }
+      else if (type === "final-chime") {
+        // Three-note rising arpeggio: 660, 880, 1320 Hz, 0.8s decay
+        const notes = [
+          { freq: 660, start: 0, len: 0.5 },
+          { freq: 880, start: 0.1, len: 0.55 },
+          { freq: 1320, start: 0.2, len: 0.6 }
+        ];
+        notes.forEach(n => {
+          const osc = audioCtx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(n.freq, t + n.start);
+
+          const g = audioCtx.createGain();
+          g.gain.setValueAtTime(eps, t + n.start);
+          g.gain.linearRampToValueAtTime(0.65, t + n.start + 0.012);
+          g.gain.exponentialRampToValueAtTime(eps, t + n.start + n.len);
+
+          osc.connect(g);
+          g.connect(outNode);
+          osc.start(t + n.start);
+          osc.stop(t + n.start + n.len);
+        });
+      }
+    }
+
+    function scheduleAllCues(audioCtx, baseTime = 0, destinationNode = null) {
+      const master = createMasterChain(audioCtx, destinationNode);
+      for (const cue of SFX_CUES) {
+        scheduleCue(audioCtx, master, cue.type, baseTime + cue.t);
+      }
+      return master;
+    }
+
+    // ==========================================
+    // ANIMATION STATE & GSAP TIMELINE
+    // ==========================================
+    const state = {};
+
+    function resetStateDefaults() {
+      Object.assign(state, {
+        bgProgress: 0, // 0 = dark navy, 1 = teal-to-blue gradient
+
+        // Scene 1
+        s1_headOp: 0, s1_headY: 40,
+        s1_toothScale: 0, s1_toothOp: 0,
+        s1_qScale: 0, s1_qOp: 0,
+
+        // Scene 2
+        s2_chipOp: 0, s2_chipY: 20,
+        s2_headOp: 0, s2_headY: 40,
+        s2_calScale: 0, s2_calOp: 0,
+        s2_crossProg: 0,
+
+        // Scene 3
+        s3_chipOp: 0, s3_chipY: 20,
+        s3_headOp: 0, s3_headY: 40,
+        s3_bellScale: 0, s3_bellOp: 0,
+        s3_bellRot: 0,
+        s3_bellDim: 0,
+        s3_missedOp: 0, s3_missedScale: 0,
+
+        // Scene 4
+        s4_chipOp: 0, s4_chipY: 20,
+        s4_headOp: 0, s4_headY: 40,
+        s4_visOp: 0, s4_visY: 40,
+        s4_typeChars: 0,
+        s4_missProg: 0,
+
+        // Scene 5
+        s5_brandOp: 0, s5_brandScale: 0.85,
+        s5_headOp: 0, s5_headY: 40,
+        s5_r1Op: 0, s5_r1X: -30, s5_t1Scale: 0,
+        s5_r2Op: 0, s5_r2X: -30, s5_t2Scale: 0,
+        s5_r3Op: 0, s5_r3X: -30, s5_t3Scale: 0,
+        s5_btnOp: 0, s5_btnScale: 0.85, s5_btnPulse: 1
+      });
+    }
+
+    resetStateDefaults();
+
+    const tl = gsap.timeline({ paused: true });
+
+    function buildTimeline() {
+      tl.clear();
+      resetStateDefaults();
+
+      // Ensure exact 20s length
+      tl.set({}, {}, DURATION);
+
+      // ---------------- SCENE 1 (0 - 4s) ----------------
+      tl.to(state, { s1_headOp: 1, s1_headY: 0, duration: 0.55, ease: "power3.out" }, 0.2);
+      tl.to(state, { s1_toothScale: 1, s1_toothOp: 1, duration: 0.55, ease: "back.out(1.6)" }, 0.8);
+      tl.to(state, { s1_qScale: 1, s1_qOp: 1, duration: 0.45, ease: "back.out(2)" }, 1.8);
+      // Exit S1
+      tl.to(state, {
+        s1_headOp: 0, s1_headY: -30,
+        s1_toothOp: 0, s1_toothScale: 0.85,
+        s1_qOp: 0, s1_qScale: 0.7,
+        duration: 0.3, ease: "power2.in"
+      }, 3.65);
+
+      // ---------------- SCENE 2 (4 - 8s) ----------------
+      tl.to(state, { s2_headOp: 1, s2_headY: 0, duration: 0.55, ease: "power3.out" }, 4.1);
+      tl.to(state, { s2_chipOp: 1, s2_chipY: 0, duration: 0.35, ease: "power3.out" }, 4.4);
+      tl.to(state, { s2_calScale: 1, s2_calOp: 1, duration: 0.55, ease: "back.out(1.4)" }, 4.7);
+      tl.to(state, { s2_crossProg: 1, duration: 0.45, ease: "power2.out" }, 6.1);
+      // Exit S2
+      tl.to(state, {
+        s2_chipOp: 0, s2_chipY: -20,
+        s2_headOp: 0, s2_headY: -30,
+        s2_calOp: 0, s2_calScale: 0.88,
+        duration: 0.3, ease: "power2.in"
+      }, 7.65);
+
+      // ---------------- SCENE 3 (8 - 12s) ----------------
+      tl.to(state, { s3_headOp: 1, s3_headY: 0, duration: 0.55, ease: "power3.out" }, 8.1);
+      tl.to(state, { s3_chipOp: 1, s3_chipY: 0, duration: 0.35, ease: "power3.out" }, 8.4);
+      tl.to(state, { s3_bellScale: 1, s3_bellOp: 1, duration: 0.55, ease: "back.out(1.5)" }, 8.7);
+      // Bell swing once at 10.1s, then dim + missed badge
+      tl.to(state, { s3_bellRot: 18, duration: 0.12, ease: "power2.out" }, 10.1);
+      tl.to(state, { s3_bellRot: -14, duration: 0.15, ease: "power2.inOut" }, 10.22);
+      tl.to(state, { s3_bellRot: 0, duration: 0.18, ease: "power2.out" }, 10.37);
+      tl.to(state, { s3_bellDim: 1, duration: 0.35, ease: "power2.out" }, 10.3);
+      tl.to(state, { s3_missedOp: 1, s3_missedScale: 1, duration: 0.4, ease: "back.out(1.8)" }, 10.32);
+      // Exit S3
+      tl.to(state, {
+        s3_chipOp: 0, s3_chipY: -20,
+        s3_headOp: 0, s3_headY: -30,
+        s3_bellOp: 0, s3_bellScale: 0.88,
+        s3_missedOp: 0,
+        duration: 0.3, ease: "power2.in"
+      }, 11.65);
+
+      // ---------------- SCENE 4 (12 - 16s) ----------------
+      tl.to(state, { s4_headOp: 1, s4_headY: 0, duration: 0.55, ease: "power3.out" }, 12.1);
+      tl.to(state, { s4_chipOp: 1, s4_chipY: 0, duration: 0.35, ease: "power3.out" }, 12.4);
+      tl.to(state, { s4_visOp: 1, s4_visY: 0, duration: 0.5, ease: "power3.out" }, 12.6);
+      // Typing "dentist near me" (15 chars) synced with 12.9..13.7
+      tl.to(state, { s4_typeChars: 15, duration: 0.9, ease: "none" }, 12.9);
+      // Middle card missing state at 14.6s
+      tl.to(state, { s4_missProg: 1, duration: 0.4, ease: "back.out(1.6)" }, 14.6);
+      // Exit S4
+      tl.to(state, {
+        s4_chipOp: 0, s4_chipY: -20,
+        s4_headOp: 0, s4_headY: -30,
+        s4_visOp: 0, s4_visY: -30,
+        duration: 0.3, ease: "power2.in"
+      }, 15.65);
+
+      // ---------------- SCENE 5 (16 - 20s) ----------------
+      tl.to(state, { bgProgress: 1, duration: 0.5, ease: "power2.inOut" }, 16.0);
+      tl.to(state, { s5_brandOp: 1, s5_brandScale: 1, duration: 0.45, ease: "back.out(1.6)" }, 16.4);
+      tl.to(state, { s5_headOp: 1, s5_headY: 0, duration: 0.5, ease: "power3.out" }, 16.55);
+
+      // 3 rows + green ticks at 17.0, 17.4, 17.8
+      tl.to(state, { s5_r1Op: 1, s5_r1X: 0, duration: 0.35, ease: "power3.out" }, 16.95);
+      tl.to(state, { s5_t1Scale: 1, duration: 0.35, ease: "back.out(2)" }, 17.0);
+
+      tl.to(state, { s5_r2Op: 1, s5_r2X: 0, duration: 0.35, ease: "power3.out" }, 17.35);
+      tl.to(state, { s5_t2Scale: 1, duration: 0.35, ease: "back.out(2)" }, 17.4);
+
+      tl.to(state, { s5_r3Op: 1, s5_r3X: 0, duration: 0.35, ease: "power3.out" }, 17.75);
+      tl.to(state, { s5_t3Scale: 1, duration: 0.35, ease: "back.out(2)" }, 17.8);
+
+      // WhatsApp button + contact pill at 18.4s, pulse at 18.9s
+      tl.to(state, { s5_btnOp: 1, s5_btnScale: 1, duration: 0.45, ease: "back.out(1.7)" }, 18.4);
+      tl.to(state, { s5_btnPulse: 1.045, duration: 0.3, ease: "sine.inOut" }, 18.9);
+      tl.to(state, { s5_btnPulse: 1.0, duration: 0.35, ease: "sine.inOut" }, 19.2);
+      tl.to(state, { s5_btnPulse: 1.03, duration: 0.35, ease: "sine.inOut" }, 19.55);
+    }
+
+    buildTimeline();
+
+    // ==========================================
+    // CANVAS 2D DRAWING HELPERS
+    // ==========================================
+    function roundRectPath(ctx, x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
+    }
+
+    function lerpColor(hex1, hex2, t) {
+      const c1 = parseInt(hex1.slice(1), 16);
+      const c2 = parseInt(hex2.slice(1), 16);
+      const r1 = (c1 >> 16) & 255, g1 = (c1 >> 8) & 255, b1 = c1 & 255;
+      const r2 = (c2 >> 16) & 255, g2 = (c2 >> 8) & 255, b2 = c2 & 255;
+      const r = Math.round(r1 + (r2 - r1) * t);
+      const g = Math.round(g1 + (g2 - g1) * t);
+      const b = Math.round(b1 + (b2 - b1) * t);
+      return `rgb(${r},${g},${b})`;
+    }
+
+    // Wrapped, centered multi-line text with phrase/keyword highlighting
+    function drawHighlightedHeadline(ctx, lines, highlights, centerX, startY, fontSize = 90, lineHeight = 1.15, baseColor = COL_WHITE, highlightColor = COL_CORAL) {
+      ctx.save();
+      ctx.font = `800 ${fontSize}px "Plus Jakarta Sans", sans-serif`;
+      ctx.textBaseline = "top";
+      const stepY = fontSize * lineHeight;
+
+      lines.forEach((lineText, idx) => {
+        const y = startY + idx * stepY;
+        const lowerLine = lineText.toLowerCase();
+
+        // Build character highlight mask for this line
+        const isHigh = new Array(lineText.length).fill(false);
+        for (const kw of highlights) {
+          const lkw = kw.toLowerCase();
+          let pos = lowerLine.indexOf(lkw);
+          while (pos !== -1) {
+            for (let k = pos; k < pos + lkw.length; k++) isHigh[k] = true;
+            pos = lowerLine.indexOf(lkw, pos + lkw.length);
+          }
+        }
+
+        // Split into contiguous color segments
+        const segments = [];
+        let curText = "";
+        let curState = isHigh[0] || false;
+        for (let i = 0; i < lineText.length; i++) {
+          if (isHigh[i] === curState) {
+            curText += lineText[i];
+          } else {
+            segments.push({ text: curText, high: curState });
+            curText = lineText[i];
+            curState = isHigh[i];
+          }
+        }
+        if (curText) segments.push({ text: curText, high: curState });
+
+        const totalWidth = ctx.measureText(lineText).width;
+        let cursorX = centerX - totalWidth / 2;
+
+        for (const seg of segments) {
+          ctx.fillStyle = seg.high ? highlightColor : baseColor;
+          ctx.fillText(seg.text, cursorX, y);
+          cursorX += ctx.measureText(seg.text).width;
+        }
+      });
+
+      ctx.restore();
+    }
+
+    function drawFloatingChip(ctx, text, centerX, y, opacity, offsetY) {
+      if (opacity <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.translate(0, offsetY);
+      ctx.font = `700 40px "Plus Jakarta Sans", sans-serif`;
+      const tw = ctx.measureText(text).width;
+      const padX = 36;
+      const w = tw + padX * 2;
+      const h = 72;
+      const x = centerX - w / 2;
+
+      roundRectPath(ctx, x, y, w, h, 36);
+      ctx.fillStyle = "rgba(15, 181, 174, 0.16)";
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = COL_TEAL;
+      ctx.stroke();
+
+      ctx.fillStyle = COL_TEAL;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, centerX, y + h / 2 + 2);
+      ctx.restore();
+    }
+
+    // Smooth Molar Tooth Vector Icon
+    function drawToothIcon(ctx, cx, cy, scale, color) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(scale, scale);
+
+      ctx.beginPath();
+      ctx.moveTo(0, -135);
+      // Right crown lobe
+      ctx.bezierCurveTo(45, -165, 130, -150, 145, -75);
+      ctx.bezierCurveTo(158, -10, 130, 50, 112, 115);
+      // Right root
+      ctx.bezierCurveTo(98, 172, 72, 195, 52, 190);
+      ctx.bezierCurveTo(32, 185, 24, 120, 0, 95);
+      // Left root
+      ctx.bezierCurveTo(-24, 120, -32, 185, -52, 190);
+      ctx.bezierCurveTo(-72, 195, -98, 172, -112, 115);
+      // Left crown lobe
+      ctx.bezierCurveTo(-130, 50, -158, -10, -145, -75);
+      ctx.bezierCurveTo(-130, -150, -45, -165, 0, -135);
+      ctx.closePath();
+
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      // Subtle shine arc on upper-left crown
+      ctx.beginPath();
+      ctx.arc(-62, -68, 38, Math.PI * 1.05, Math.PI * 1.55);
+      ctx.lineWidth = 12;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "rgba(255,255,255,0.45)";
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // ==========================================
+    // MAIN FRAME RENDERER
+    // ==========================================
+    function drawFrame(ctx) {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      // 1. Background
+      if (state.bgProgress <= 0.001) {
+        ctx.fillStyle = COL_NAVY;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      } else {
+        ctx.fillStyle = COL_NAVY;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        ctx.save();
+        ctx.globalAlpha = state.bgProgress;
+        const grad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+        grad.addColorStop(0, COL_TEAL);
+        grad.addColorStop(1, COL_BLUE);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        ctx.restore();
+      }
+
+      // Safe center X inside [80..940] is 510
+      const SAFE_CX = 510;
+
+      // ==========================================
+      // SCENE 1: Patients visit but never book?
+      // ==========================================
+      if (state.s1_headOp > 0.001 || state.s1_toothOp > 0.001) {
+        if (state.s1_headOp > 0.001) {
+          ctx.save();
+          ctx.globalAlpha = state.s1_headOp;
+          ctx.translate(0, state.s1_headY);
+          drawHighlightedHeadline(
+            ctx,
+            ["Patients visit", "but never book?"],
+            ["never book"],
+            SAFE_CX,
+            470,
+            92,
+            1.15
+          );
+          ctx.restore();
+        }
+
+        if (state.s1_toothOp > 0.001) {
+          ctx.save();
+          ctx.globalAlpha = state.s1_toothOp;
+          drawToothIcon(ctx, SAFE_CX, 1140, state.s1_toothScale * 1.15, COL_TEAL);
+          ctx.restore();
+        }
+
+        if (state.s1_qOp > 0.001) {
+          ctx.save();
+          ctx.globalAlpha = state.s1_qOp;
+          const bx = SAFE_CX + 135;
+          const by = 910;
+          ctx.translate(bx, by);
+          ctx.scale(state.s1_qScale, state.s1_qScale);
+
+          // Coral speech bubble
+          ctx.beginPath();
+          ctx.arc(0, 0, 74, 0, Math.PI * 2);
+          ctx.fillStyle = COL_CORAL;
+          ctx.fill();
+
+          // Little bubble tail
+          ctx.beginPath();
+          ctx.moveTo(-45, 52);
+          ctx.lineTo(-75, 88);
+          ctx.lineTo(-15, 68);
+          ctx.closePath();
+          ctx.fillStyle = COL_CORAL;
+          ctx.fill();
+
+          ctx.fillStyle = COL_WHITE;
+          ctx.font = `800 92px "Plus Jakarta Sans", sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("?", 0, 6);
+          ctx.restore();
+        }
+      }
+
+      // ==========================================
+      // SCENE 2: No online booking option
+      // ==========================================
+      if (state.s2_headOp > 0.001 || state.s2_calOp > 0.001 || state.s2_chipOp > 0.001) {
+        drawFloatingChip(ctx, "Reason 1 of 3", SAFE_CX, 355, state.s2_chipOp, state.s2_chipY);
+
+        if (state.s2_headOp > 0.001) {
+          ctx.save();
+          ctx.globalAlpha = state.s2_headOp;
+          ctx.translate(0, state.s2_headY);
+          drawHighlightedHeadline(
+            ctx,
+            ["No online booking", "option"],
+            ["online booking"],
+            SAFE_CX,
+            475,
+            92,
+            1.15
+          );
+          ctx.restore();
+        }
+
+        if (state.s2_calOp > 0.001) {
+          ctx.save();
+          ctx.globalAlpha = state.s2_calOp;
+          const cx = SAFE_CX;
+          const cy = 1125;
+          ctx.translate(cx, cy);
+          ctx.scale(state.s2_calScale, state.s2_calScale);
+
+          const calW = 460;
+          const calH = 440;
+          const x0 = -calW / 2;
+          const y0 = -calH / 2;
+
+          // Calendar white body
+          roundRectPath(ctx, x0, y0, calW, calH, 42);
+          ctx.fillStyle = COL_WHITE;
+          ctx.fill();
+
+          // Teal header bar (clipped top corners)
+          ctx.save();
+          roundRectPath(ctx, x0, y0, calW, calH, 42);
+          ctx.clip();
+          ctx.fillStyle = COL_TEAL;
+          ctx.fillRect(x0, y0, calW, 115);
+          ctx.restore();
+
+          // Binder rings
+          ctx.fillStyle = COL_WHITE;
+          roundRectPath(ctx, -125, y0 - 26, 28, 62, 14);
+          ctx.fill();
+          roundRectPath(ctx, 97, y0 - 26, 28, 62, 14);
+          ctx.fill();
+
+          // Simple grid cells
+          ctx.fillStyle = "#D5E3EC";
+          const cols = 3, rows = 2;
+          const cellW = 96, cellH = 74;
+          const gapX = 32, gapY = 32;
+          const gridW = cols * cellW + (cols - 1) * gapX;
+          const startX = -gridW / 2;
+          const startY = y0 + 165;
+
+          for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+              const rx = startX + c * (cellW + gapX);
+              const ry = startY + r * (cellH + gapY);
+              roundRectPath(ctx, rx, ry, cellW, cellH, 16);
+              ctx.fill();
+            }
+          }
+
+          // Coral cross stroke animation over calendar
+          if (state.s2_crossProg > 0.001) {
+            const p1 = Math.min(1, state.s2_crossProg * 2);
+            const p2 = Math.max(0, (state.s2_crossProg - 0.5) * 2);
+            const span = 185;
+
+            ctx.lineCap = "round";
+            ctx.lineWidth = 34;
+            ctx.strokeStyle = COL_CORAL;
+
+            ctx.beginPath();
+            ctx.moveTo(-span, -span + 20);
+            ctx.lineTo(-span + span * 2 * p1, -span + 20 + span * 2 * p1);
+            ctx.stroke();
+
+            if (p2 > 0) {
+              ctx.beginPath();
+              ctx.moveTo(span, -span + 20);
+              ctx.lineTo(span - span * 2 * p2, -span + 20 + span * 2 * p2);
+              ctx.stroke();
+            }
+          }
+
+          ctx.restore();
+        }
+      }
+
+      // ==========================================
+      // SCENE 3: No reminders, so they forget
+      // ==========================================
+      if (state.s3_headOp > 0.001 || state.s3_bellOp > 0.001 || state.s3_chipOp > 0.001) {
+        drawFloatingChip(ctx, "Reason 2 of 3", SAFE_CX, 355, state.s3_chipOp, state.s3_chipY);
+
+        if (state.s3_headOp > 0.001) {
+          ctx.save();
+          ctx.globalAlpha = state.s3_headOp;
+          ctx.translate(0, state.s3_headY);
+          drawHighlightedHeadline(
+            ctx,
+            ["No reminders,", "so they forget"],
+            ["reminders", "forget"],
+            SAFE_CX,
+            475,
+            92,
+            1.15
+          );
+          ctx.restore();
+        }
+
+        if (state.s3_bellOp > 0.001) {
+          const cx = SAFE_CX;
+          const cy = 1120;
+          ctx.save();
+          ctx.globalAlpha = state.s3_bellOp;
+          ctx.translate(cx, cy - 170);
+          ctx.scale(state.s3_bellScale, state.s3_bellScale);
+          ctx.rotate((state.s3_bellRot * Math.PI) / 180);
+          ctx.translate(0, 170);
+
+          const bellColor = lerpColor(COL_WHITE, COL_GREY, state.s3_bellDim);
+          ctx.fillStyle = bellColor;
+
+          // Top loop
+          ctx.beginPath();
+          ctx.arc(0, -195, 28, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Bell dome + flared skirt
+          ctx.beginPath();
+          ctx.moveTo(-130, -50);
+          ctx.arc(0, -50, 130, Math.PI, 0, false);
+          ctx.bezierCurveTo(130, 50, 165, 115, 185, 145);
+          ctx.lineTo(-185, 145);
+          ctx.bezierCurveTo(-165, 115, -130, 50, -130, -50);
+          ctx.closePath();
+          ctx.fill();
+
+          // Rounded base lip
+          roundRectPath(ctx, -200, 130, 400, 36, 18);
+          ctx.fill();
+
+          // Clapper
+          ctx.beginPath();
+          ctx.arc(0, 185, 42, 0, Math.PI);
+          ctx.fill();
+
+          ctx.restore();
+
+          // Coral "missed" badge
+          if (state.s3_missedOp > 0.001) {
+            ctx.save();
+            ctx.globalAlpha = state.s3_missedOp * state.s3_bellOp;
+            ctx.translate(cx + 125, cy - 105);
+            ctx.scale(state.s3_missedScale, state.s3_missedScale);
+
+            const bw = 210, bh = 74;
+            roundRectPath(ctx, -bw / 2, -bh / 2, bw, bh, 37);
+            ctx.fillStyle = COL_CORAL;
+            ctx.fill();
+
+            ctx.fillStyle = COL_WHITE;
+            ctx.font = `800 40px "Plus Jakarta Sans", sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("missed", 0, 2);
+            ctx.restore();
+          }
+        }
+      }
+
+      // ==========================================
+      // SCENE 4: Not visible on Google
+      // ==========================================
+      if (state.s4_headOp > 0.001 || state.s4_visOp > 0.001 || state.s4_chipOp > 0.001) {
+        drawFloatingChip(ctx, "Reason 3 of 3", SAFE_CX, 355, state.s4_chipOp, state.s4_chipY);
+
+        if (state.s4_headOp > 0.001) {
+          ctx.save();
+          ctx.globalAlpha = state.s4_headOp;
+          ctx.translate(0, state.s4_headY);
+          drawHighlightedHeadline(
+            ctx,
+            ["Not visible", "on Google"],
+            ["Not visible"],
+            SAFE_CX,
+            475,
+            92,
+            1.15
+          );
+          ctx.restore();
+        }
+
+        if (state.s4_visOp > 0.001) {
+          ctx.save();
+          ctx.globalAlpha = state.s4_visOp;
+          ctx.translate(0, state.s4_visY);
+
+          const boxW = 800;
+          const boxX = SAFE_CX - boxW / 2;
+
+          // 1. White Search Bar
+          const sbY = 820;
+          const sbH = 108;
+          roundRectPath(ctx, boxX, sbY, boxW, sbH, 54);
+          ctx.fillStyle = COL_WHITE;
+          ctx.fill();
+
+          // Magnifying glass icon
+          const mgX = boxX + 66;
+          const mgY = sbY + sbH / 2 - 4;
+          ctx.strokeStyle = COL_TEAL;
+          ctx.lineWidth = 8;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.arc(mgX, mgY, 20, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(mgX + 15, mgY + 15);
+          ctx.lineTo(mgX + 30, mgY + 30);
+          ctx.stroke();
+
+          // Typed search query
+          const fullQuery = "dentist near me";
+          const charCount = Math.round(state.s4_typeChars);
+          const shownQuery = fullQuery.slice(0, charCount);
+
+          ctx.fillStyle = COL_NAVY;
+          ctx.font = `700 44px "Plus Jakarta Sans", sans-serif`;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(shownQuery, boxX + 125, sbY + sbH / 2 + 2);
+
+          // Blinking cursor while typing
+          if (charCount < fullQuery.length) {
+            const tw = ctx.measureText(shownQuery).width;
+            ctx.fillStyle = COL_TEAL;
+            ctx.fillRect(boxX + 125 + tw + 6, sbY + 28, 5, sbH - 56);
+          }
+
+          // 2. Three Result Cards
+          const cardH = 122;
+          const cardGap = 28;
+          const cardStartY = 975;
+
+          // Helper for plain result card (cards 0 and 2)
+          const drawPlainCard = (y) => {
+            roundRectPath(ctx, boxX, y, boxW, cardH, 24);
+            ctx.fillStyle = "#112236";
+            ctx.fill();
+
+            // Placeholder title & subtitle bars
+            roundRectPath(ctx, boxX + 36, y + 32, 320, 24, 12);
+            ctx.fillStyle = "#2A435E";
+            ctx.fill();
+
+            roundRectPath(ctx, boxX + 36, y + 72, 200, 18, 9);
+            ctx.fillStyle = "#1C314A";
+            ctx.fill();
+          };
+
+          drawPlainCard(cardStartY);
+          drawPlainCard(cardStartY + (cardH + cardGap) * 2);
+
+          // Middle Card (Card 1)
+          const midY = cardStartY + cardH + cardGap;
+          if (state.s4_missProg <= 0.001) {
+            drawPlainCard(midY);
+          } else {
+            // Dashed empty outline with CLINIC_DEMO in grey and coral "?"
+            ctx.save();
+            roundRectPath(ctx, boxX, midY, boxW, cardH, 24);
+            ctx.fillStyle = "rgba(17, 34, 54, 0.35)";
+            ctx.fill();
+            ctx.setLineDash([16, 12]);
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = COL_GREY;
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = COL_GREY;
+            ctx.font = `700 40px "Plus Jakarta Sans", sans-serif`;
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText(CLINIC_DEMO, boxX + 38, midY + cardH / 2 + 2);
+
+            // Coral "?" badge on the right of middle card
+            const qx = boxX + boxW - 65;
+            const qy = midY + cardH / 2;
+            ctx.translate(qx, qy);
+            ctx.scale(state.s4_missProg, state.s4_missProg);
+
+            ctx.beginPath();
+            ctx.arc(0, 0, 34, 0, Math.PI * 2);
+            ctx.fillStyle = COL_CORAL;
+            ctx.fill();
+
+            ctx.fillStyle = COL_WHITE;
+            ctx.font = `800 44px "Plus Jakarta Sans", sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("?", 0, 2);
+            ctx.restore();
+          }
+
+          ctx.restore();
+        }
+      }
+
+      // ==========================================
+      // SCENE 5: CTA Scene (16 - 20s)
+      // ==========================================
+      if (state.s5_brandOp > 0.001 || state.s5_headOp > 0.001) {
+        // 1. Tooth logo + BRAND wordmark ("ezsites", large, white)
+        if (state.s5_brandOp > 0.001) {
+          ctx.save();
+          ctx.globalAlpha = state.s5_brandOp;
+          ctx.translate(SAFE_CX, 375);
+          ctx.scale(state.s5_brandScale, state.s5_brandScale);
+
+          drawToothIcon(ctx, -145, 0, 0.24, COL_WHITE);
+
+          ctx.fillStyle = COL_WHITE;
+          ctx.font = `800 76px "Plus Jakarta Sans", sans-serif`;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(BRAND, -82, 4);
+          ctx.restore();
+        }
+
+        // 2. Headline: "Fix all 3 with one website" (max 2 lines, white, no highlight)
+        if (state.s5_headOp > 0.001) {
+          ctx.save();
+          ctx.globalAlpha = state.s5_headOp;
+          ctx.translate(0, state.s5_headY);
+          drawHighlightedHeadline(
+            ctx,
+            ["Fix all 3 with", "one website"],
+            [],
+            SAFE_CX,
+            475,
+            92,
+            1.15,
+            COL_WHITE,
+            COL_WHITE
+          );
+          ctx.restore();
+        }
+
+        // 3. Three simple rows with green ticks
+        const rows = [
+          { text: "Online booking", op: state.s5_r1Op, xOff: state.s5_r1X, tScale: state.s5_t1Scale, y: 785 },
+          { text: "Auto reminders", op: state.s5_r2Op, xOff: state.s5_r2X, tScale: state.s5_t2Scale, y: 910 },
+          { text: "Found on Google", op: state.s5_r3Op, xOff: state.s5_r3X, tScale: state.s5_t3Scale, y: 1035 }
+        ];
+
+        rows.forEach(r => {
+          if (r.op <= 0.001) return;
+          ctx.save();
+          ctx.globalAlpha = r.op;
+          ctx.translate(r.xOff, 0);
+
+          const rowW = 680;
+          const rowH = 98;
+          const rx = SAFE_CX - rowW / 2;
+          const ry = r.y;
+
+          roundRectPath(ctx, rx, ry, rowW, rowH, 26);
+          ctx.fillStyle = "rgba(7, 18, 31, 0.28)";
+          ctx.fill();
+
+          // Green tick circle
+          const tx = rx + 62;
+          const ty = ry + rowH / 2;
+          if (r.tScale > 0.001) {
+            ctx.save();
+            ctx.translate(tx, ty);
+            ctx.scale(r.tScale, r.tScale);
+
+            ctx.beginPath();
+            ctx.arc(0, 0, 30, 0, Math.PI * 2);
+            ctx.fillStyle = "#22C55E";
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(-13, 1);
+            ctx.lineTo(-3, 11);
+            ctx.lineTo(14, -9);
+            ctx.lineWidth = 6.5;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.strokeStyle = COL_WHITE;
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          ctx.fillStyle = COL_WHITE;
+          ctx.font = `700 46px "Plus Jakarta Sans", sans-serif`;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(r.text, rx + 120, ty + 2);
+
+          ctx.restore();
+        });
+
+        // 4. White pulsing button "Message us on WhatsApp" + Contact Pill below it
+        if (state.s5_btnOp > 0.001) {
+          ctx.save();
+          ctx.globalAlpha = state.s5_btnOp;
+
+          // Button
+          const btnY = 1235;
+          const btnW = 740;
+          const btnH = 114;
+          ctx.save();
+          ctx.translate(SAFE_CX, btnY);
+          const sc = state.s5_btnScale * state.s5_btnPulse;
+          ctx.scale(sc, sc);
+
+          roundRectPath(ctx, -btnW / 2, -btnH / 2, btnW, btnH, 57);
+          ctx.fillStyle = COL_WHITE;
+          ctx.fill();
+
+          ctx.fillStyle = COL_NAVY;
+          ctx.font = `800 46px "Plus Jakarta Sans", sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("Message us on WhatsApp", 0, 2);
+          ctx.restore();
+
+          // Contact Pill below button (inside safe box y <= 1470)
+          const pillY = 1380;
+          const pillW = 460;
+          const pillH = 74;
+          ctx.save();
+          ctx.translate(SAFE_CX, pillY);
+          ctx.scale(state.s5_btnScale, state.s5_btnScale);
+
+          roundRectPath(ctx, -pillW / 2, -pillH / 2, pillW, pillH, 37);
+          ctx.fillStyle = "rgba(7, 18, 31, 0.42)";
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = "rgba(246, 251, 251, 0.35)";
+          ctx.stroke();
+
+          ctx.fillStyle = COL_WHITE;
+          ctx.font = `700 40px "Plus Jakarta Sans", sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(CONTACT, 0, 2);
+          ctx.restore();
+
+          ctx.restore();
+        }
+      }
+    }
+
+    // ==========================================
+    // FONT LOADING & INITIAL RENDER
+    // ==========================================
+    async function ensureFontsLoaded() {
+      await Promise.all([
+        document.fonts.load('500 40px "Plus Jakarta Sans"'),
+        document.fonts.load('700 48px "Plus Jakarta Sans"'),
+        document.fonts.load('800 92px "Plus Jakarta Sans"')
+      ]);
+      await document.fonts.ready;
+    }
+
+    await ensureFontsLoaded();
+    tl.time(0.95);
+    drawFrame(ctx);
+    statusEl.textContent = "Ready — Click Preview or Export MP4";
+
+    // ==========================================
+    // PREVIEW ENGINE (Synced to AudioContext clock)
+    // ==========================================
+    let previewCtx = null;
+    let previewRaf = null;
+    let isExporting = false;
+
+    function stopPreview() {
+      if (previewRaf) {
+        cancelAnimationFrame(previewRaf);
+        previewRaf = null;
+      }
+      if (previewCtx) {
+        try { previewCtx.close(); } catch (_) {}
+        previewCtx = null;
+      }
+    }
+
+    previewBtn.addEventListener("click", async () => {
+      if (isExporting) return;
+      clearError();
+      stopPreview();
+
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        previewCtx = new AudioCtx();
+        if (previewCtx.state === "suspended") {
+          await previewCtx.resume();
+        }
+
+        const startOffset = previewCtx.currentTime + 0.05;
+        scheduleAllCues(previewCtx, startOffset);
+
+        statusEl.textContent = "Playing preview...";
+
+        const tick = () => {
+          if (!previewCtx) return;
+          const elapsed = Math.max(0, previewCtx.currentTime - startOffset);
+          if (elapsed >= DURATION) {
+            tl.time(DURATION);
+            drawFrame(ctx);
+            stopPreview();
+            statusEl.textContent = "Preview finished.";
+            return;
+          }
+          tl.time(elapsed);
+          drawFrame(ctx);
+          previewRaf = requestAnimationFrame(tick);
+        };
+
+        previewRaf = requestAnimationFrame(tick);
+      } catch (err) {
+        showError("Preview error: " + (err && err.message ? err.message : String(err)));
+      }
+    });
+
+    // ==========================================
+    // EXPORT MP4 ENGINE (WebCodecs + mp4-muxer + Fallback)
+    // ==========================================
+    async function renderOfflineAudio() {
+      const sampleRate = 44100;
+      const totalSamples = sampleRate * DURATION;
+      const offlineCtx = new OfflineAudioContext(2, totalSamples, sampleRate);
+      scheduleAllCues(offlineCtx, 0);
+      return await offlineCtx.startRendering();
+    }
+
+    async function fallbackRealtimeExport() {
+      statusEl.textContent = "WebCodecs unavailable — using real-time MediaRecorder fallback...";
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const rCtx = new AudioCtx();
+      if (rCtx.state === "suspended") await rCtx.resume();
+
+      const dest = rCtx.createMediaStreamDestination();
+      const startOffset = rCtx.currentTime + 0.08;
+      scheduleAllCues(rCtx, startOffset, dest);
+
+      const canvasStream = canvas.captureStream(FPS);
+      const combined = new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...dest.stream.getAudioTracks()
+      ]);
+
+      let mimeType = "video/mp4";
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = "video/webm;codecs=vp9,opus";
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = "video/webm";
+        }
+      }
+
+      const chunks = [];
+      const recorder = new MediaRecorder(combined, { mimeType, videoBitsPerSecond: 8_000_000 });
+      recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+
+      const donePromise = new Promise((resolve, reject) => {
+        recorder.onstop = () => resolve();
+        recorder.onerror = (e) => reject(e.error || new Error("MediaRecorder error"));
+      });
+
+      recorder.start();
+
+      await new Promise((resolve) => {
+        const step = () => {
+          const elapsed = Math.max(0, rCtx.currentTime - startOffset);
+          const pct = Math.min(100, Math.round((elapsed / DURATION) * 100));
+          statusEl.textContent = `Fallback recording (real-time) ${pct}%`;
+          if (elapsed >= DURATION) {
+            tl.time(DURATION);
+            drawFrame(ctx);
+            resolve();
+            return;
+          }
+          tl.time(elapsed);
+          drawFrame(ctx);
+          requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+
+      recorder.stop();
+      await donePromise;
+      try { await rCtx.close(); } catch (_) {}
+
+      const ext = mimeType.includes("mp4") ? "mp4" : "webm";
+      const blob = new Blob(chunks, { type: mimeType });
+      return { blob, filename: `ezsites-3-reasons-reel.${ext}`, note: `Exported via real-time fallback (${ext.toUpperCase()}).` };
+    }
+
+    exportBtn.addEventListener("click", async () => {
+      if (isExporting) return;
+      stopPreview();
+      clearError();
+      isExporting = true;
+      previewBtn.disabled = true;
+      exportBtn.disabled = true;
+      resultArea.style.display = "none";
+
+      let wakeLock = null;
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLock = await navigator.wakeLock.request("screen");
+        }
+      } catch (_) {}
+
+      try {
+        await ensureFontsLoaded();
+
+        // Check WebCodecs VideoEncoder support
+        let chosenVideoCodec = null;
+        if ("VideoEncoder" in window) {
+          const candidates = ["avc1.64002A", "avc1.640028", "avc1.4D0028"];
+          for (const c of candidates) {
+            const res = await VideoEncoder.isConfigSupported({
+              codec: c,
+              width: WIDTH,
+              height: HEIGHT,
+              bitrate: 8_000_000,
+              framerate: FPS
+            });
+            if (res.supported) {
+              chosenVideoCodec = c;
+              break;
+            }
+          }
+        }
+
+        if (!chosenVideoCodec) {
+          const fb = await fallbackRealtimeExport();
+          finishDownload(fb.blob, fb.filename, fb.note);
+          return;
+        }
+
+        // 1. Render SFX Audio offline
+        statusEl.textContent = "Synthesizing audio track...";
+        const audioBuffer = await renderOfflineAudio();
+
+        // 2. Check AudioEncoder support
+        let hasAudioEncoder = false;
+        const audioConfig = {
+          codec: "mp4a.40.2",
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitrate: 128000
+        };
+        if ("AudioEncoder" in window && "AudioData" in window) {
+          try {
+            const aSup = await AudioEncoder.isConfigSupported(audioConfig);
+            hasAudioEncoder = Boolean(aSup && aSup.supported);
+          } catch (_) {
+            hasAudioEncoder = false;
+          }
+        }
+
+        // 3. Configure mp4-muxer
+        const muxerOptions = {
+          target: new ArrayBufferTarget(),
+          video: {
+            codec: "avc",
+            width: WIDTH,
+            height: HEIGHT
+          },
+          fastStart: "in-memory"
+        };
+        if (hasAudioEncoder) {
+          muxerOptions.audio = {
+            codec: "aac",
+            numberOfChannels: 2,
+            sampleRate: 44100
+          };
+        }
+        const muxer = new Muxer(muxerOptions);
+
+        let encoderError = null;
+
+        const videoEncoder = new VideoEncoder({
+          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+          error: (e) => { encoderError = e; }
+        });
+        videoEncoder.configure({
+          codec: chosenVideoCodec,
+          width: WIDTH,
+          height: HEIGHT,
+          bitrate: 8_000_000,
+          framerate: FPS
+        });
+
+        // 4. Encode Audio if supported
+        let audioEncoder = null;
+        if (hasAudioEncoder) {
+          audioEncoder = new AudioEncoder({
+            output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+            error: (e) => { encoderError = e; }
+          });
+          audioEncoder.configure(audioConfig);
+
+          const ch0 = audioBuffer.getChannelData(0);
+          const ch1 = audioBuffer.getChannelData(1);
+          const totalFrames = audioBuffer.length;
+          const chunkSize = 1024;
+          const sr = audioBuffer.sampleRate;
+
+          for (let offset = 0; offset < totalFrames; offset += chunkSize) {
+            if (encoderError) throw encoderError;
+            const frames = Math.min(chunkSize, totalFrames - offset);
+            const planar = new Float32Array(frames * 2);
+            planar.set(ch0.subarray(offset, offset + frames), 0);
+            planar.set(ch1.subarray(offset, offset + frames), frames);
+
+            const timestampUs = Math.round((offset / sr) * 1_000_000);
+            const audioData = new AudioData({
+              format: "f32-planar",
+              sampleRate: sr,
+              numberOfFrames: frames,
+              numberOfChannels: 2,
+              timestamp: timestampUs,
+              data: planar
+            });
+            audioEncoder.encode(audioData);
+            audioData.close();
+          }
+          await audioEncoder.flush();
+        }
+
+        // 5. Loop Video Frames 0 .. DURATION*FPS - 1
+        const totalVideoFrames = DURATION * FPS;
+        const frameDurationUs = Math.round(1_000_000 / FPS);
+
+        for (let i = 0; i < totalVideoFrames; i++) {
+          if (encoderError) throw encoderError;
+
+          const t = i / FPS;
+          tl.time(t);
+          drawFrame(ctx);
+
+          const timestampUs = Math.round((i * 1_000_000) / FPS);
+          const frame = new VideoFrame(canvas, {
+            timestamp: timestampUs,
+            duration: frameDurationUs
+          });
+
+          const isKeyFrame = i % 30 === 0;
+          videoEncoder.encode(frame, { keyFrame: isKeyFrame });
+          frame.close();
+
+          // Respect encoder backpressure
+          while (videoEncoder.encodeQueueSize > 8) {
+            if (encoderError) throw encoderError;
+            await new Promise((r) => setTimeout(r, 4));
+          }
+
+          if (i % 10 === 0 || i === totalVideoFrames - 1) {
+            const pct = Math.round(((i + 1) / totalVideoFrames) * 100);
+            statusEl.textContent = `Exporting ${pct}%`;
+            await new Promise((r) => setTimeout(r, 0));
+          }
+        }
+
+        statusEl.textContent = "Finalizing MP4...";
+        await videoEncoder.flush();
+        if (encoderError) throw encoderError;
+
+        muxer.finalize();
+        const { buffer } = muxer.target;
+        const blob = new Blob([buffer], { type: "video/mp4" });
+
+        const note = hasAudioEncoder
+          ? "Export complete! MP4 downloaded."
+          : "Export complete (video only — AudioEncoder AAC unsupported in this browser).";
+
+        finishDownload(blob, "ezsites-3-reasons-reel.mp4", note);
+      } catch (err) {
+        showError("Export failed: " + (err && err.message ? err.message : String(err)));
+        statusEl.textContent = "Export encountered an error.";
+      } finally {
+        if (wakeLock) {
+          try { await wakeLock.release(); } catch (_) {}
+        }
+        isExporting = false;
+        previewBtn.disabled = false;
+        exportBtn.disabled = false;
+      }
+    });
+
+    function finishDownload(blob, filename, statusMsg) {
+      const url = URL.createObjectURL(blob);
+      downloadLink.href = url;
+      downloadLink.download = filename;
+      resultVideo.src = url;
+      resultArea.style.display = "flex";
+      statusEl.textContent = statusMsg;
+
+      const tempA = document.createElement("a");
+      tempA.href = url;
+      tempA.download = filename;
+      document.body.appendChild(tempA);
+      tempA.click();
+      tempA.remove();
+    }
+  </script>
+</body>
+</html>
