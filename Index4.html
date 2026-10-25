@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ezsites.dev - Instagram Reel</title>
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background-color: #050911;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  #viewport {
+    position: relative;
+    width: 1080px;
+    height: 1920px;
+    background-color: #0B1220;
+    overflow: hidden;
+    transform-origin: center center;
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.8);
+  }
+
+  #reel-canvas {
+    display: block;
+    width: 1080px;
+    height: 1920px;
+  }
+
+  #tap-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: #0B1220;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: opacity 0.35s ease;
+  }
+
+  #tap-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .play-circle {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 5px solid #2DD4BF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 44px;
+    background: rgba(45, 212, 191, 0.08);
+    transition: transform 0.2s ease;
+  }
+
+  #tap-overlay:active .play-circle {
+    transform: scale(0.94);
+  }
+
+  .play-triangle {
+    width: 0;
+    height: 0;
+    border-top: 32px solid transparent;
+    border-bottom: 32px solid transparent;
+    border-left: 52px solid #2DD4BF;
+    margin-left: 12px;
+  }
+
+  .tap-title {
+    color: #FFFFFF;
+    font-size: 64px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 18px;
+  }
+
+  .tap-subtitle {
+    color: #2DD4BF;
+    font-size: 40px;
+    font-weight: 600;
+    opacity: 0.85;
+  }
+</style>
+</head>
+<body>
+
+<div id="viewport">
+  <canvas id="reel-canvas" width="1080" height="1920"></canvas>
+  <div id="tap-overlay">
+    <div class="play-circle">
+      <div class="play-triangle"></div>
+    </div>
+    <div class="tap-title">Tap to play</div>
+    <div class="tap-subtitle">ezsites.dev • 22s</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const viewport = document.getElementById('viewport');
+  const canvas = document.getElementById('reel-canvas');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('tap-overlay');
+
+  const W = 1080;
+  const H = 1920;
+  const BG_COLOR = '#0B1220';
+  const ACCENT_COLOR = '#2DD4BF';
+  const WHITE = '#FFFFFF';
+  const MUTED_WHITE = '#94A3B8';
+  const RED_COLOR = '#EF4444';
+  const GREEN_COLOR = '#2DD4BF';
+  const CARD_BG = '#131F35';
+  const CARD_BORDER = '#233554';
+
+  function resizeViewport() {
+    const scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+    viewport.style.transform = `scale(${scale})`;
+  }
+  window.addEventListener('resize', resizeViewport);
+  resizeViewport();
+
+  // Math & Easing Helpers
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  }
+
+  function prog(t, start, duration) {
+    return clamp((t - start) / duration, 0, 1);
+  }
+
+  function easeOutCubic(x) {
+    return 1 - Math.pow(1 - x, 3);
+  }
+
+  function easeOutBack(x) {
+    const c1 = 1.70158;
+    const c3 = c1 + 1;
+    return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
+  }
+
+  function sceneAlpha(t, start, end, isLast) {
+    const fade = 0.4;
+    if (t < start - fade || (!isLast && t > end + fade)) return 0;
+    let a = 1;
+    if (t < start + fade) {
+      a = clamp((t - start) / fade, 0, 1);
+    }
+    if (!isLast && t > end - fade) {
+      a = Math.min(a, clamp((end - t) / fade, 0, 1));
+    }
+    return easeOutCubic(a);
+  }
+
+  // Rounded Rect Helper
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  // Web Audio Synthesizer (All procedural, Master Gain = 0.24)
+  let audioCtx = null;
+  let masterGain = null;
+  let noiseBuffer = null;
+
+  function initAudio() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AudioContextClass();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.24; // Subtle so Hindi voice-over stays clearly audible
+    masterGain.connect(audioCtx.destination);
+
+    // Pre-generate 1 second white noise buffer for soft whooshes
+    const sampleRate = audioCtx.sampleRate;
+    noiseBuffer = audioCtx.createBuffer(1, sampleRate * 1.0, sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+  }
+
+  function playWhoosh() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const src = audioCtx.createBufferSource();
+    src.buffer = noiseBuffer;
+
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.setValueAtTime(1.8, now);
+    filter.frequency.setValueAtTime(260, now);
+    filter.frequency.exponentialRampToValueAtTime(1100, now + 0.14);
+    filter.frequency.exponentialRampToValueAtTime(320, now + 0.30);
+
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.28, now + 0.10);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.30);
+
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+
+    src.start(now);
+    src.stop(now + 0.31);
+  }
+
+  function playPop() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.exponentialRampToValueAtTime(170, now + 0.09);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.45, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+
+    osc.connect(gain);
+    gain.connect(masterGain);
+
+    osc.start(now);
+    osc.stop(now + 0.10);
+  }
+
+  function playTick() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1100, now);
+    osc.frequency.exponentialRampToValueAtTime(420, now + 0.045);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.35, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+
+    osc.connect(gain);
+    gain.connect(masterGain);
+
+    osc.start(now);
+    osc.stop(now + 0.05);
+  }
+
+  function playThud() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(145, now);
+    osc.frequency.exponentialRampToValueAtTime(48, now + 0.18);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.65, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.19);
+
+    osc.connect(gain);
+    gain.connect(masterGain);
+
+    osc.start(now);
+    osc.stop(now + 0.20);
+  }
+
+  function playMutedDing() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const filter = audioCtx.createBiquadFilter();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(620, now);
+    osc.frequency.exponentialRampToValueAtTime(595, now + 0.28);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, now);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.32, now + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(masterGain);
+
+    osc.start(now);
+    osc.stop(now + 0.30);
+  }
+
+  function playPing() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.3, now + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+    osc.connect(gain);
+    gain.connect(masterGain);
+
+    osc.start(now);
+    osc.stop(now + 0.26);
+  }
+
+  function playSuccessChime(pitchOffset = 0) {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const base1 = 587.33 * Math.pow(2, pitchOffset / 12); // D5
+    const base2 = 880.00 * Math.pow(2, pitchOffset / 12); // A5
+
+    [base1, base2].forEach((freq, idx) => {
+      const start = now + idx * 0.075;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, start);
+
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.linearRampToValueAtTime(0.34, start + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.26);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(start);
+      osc.stop(start + 0.27);
+    });
+  }
+
+  function playFinalChime() {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+    notes.forEach((freq, idx) => {
+      const start = now + idx * 0.055;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, start);
+
+      gain.gain.setValueAtTime(0.001, start);
+      gain.gain.linearRampToValueAtTime(0.26, start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.45);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(start);
+      osc.stop(start + 0.46);
+    });
+  }
+
+  // Timeline Sound Cues (Synced to exact animation timestamps)
+  const soundEvents = [
+    // Scene 1 (0 - 4s)
+    { time: 0.25, fn: playPop, fired: false },          // Clinic icon appears
+    { time: 0.65, fn: playWhoosh, fired: false },       // Hook text slides in
+    { time: 1.05, fn: playPop, fired: false },          // Question mark pops above icon
+
+    // Scene 2 (4 - 8s)
+    { time: 4.15, fn: playTick, fired: false },         // Number "1" reveal
+    { time: 4.35, fn: playPop, fired: false },          // Calendar icon appears
+    { time: 4.65, fn: playWhoosh, fired: false },       // Text "No online booking option" slides in
+    { time: 5.20, fn: playThud, fired: false },         // Red cross appears
+
+    // Scene 3 (8 - 13s)
+    { time: 8.15, fn: playTick, fired: false },         // Number "2" reveal
+    { time: 8.35, fn: playPop, fired: false },          // Bell icon appears
+    { time: 8.65, fn: playWhoosh, fired: false },       // Text "No reminders, so they forget" slides in
+    { time: 9.30, fn: playMutedDing, fired: false },    // Silent bell + faded "missed" badge
+
+    // Scene 4 (13 - 17s)
+    { time: 13.15, fn: playTick, fired: false },        // Number "3" reveal
+    { time: 13.35, fn: playPop, fired: false },         // Search bar appears
+    { time: 13.65, fn: playWhoosh, fired: false },      // Text "Not visible on Google" slides in
+    { time: 14.30, fn: playPing, fired: false },        // Empty search result appears
+
+    // Scene 5 (17 - 22s)
+    { time: 17.20, fn: playPop, fired: false },         // 3 icons row appears
+    { time: 17.50, fn: playWhoosh, fired: false },      // Line 1 "Fix all 3 with one website." slides in
+    { time: 18.00, fn: () => playSuccessChime(0), fired: false }, // Calendar -> Green tick
+    { time: 18.55, fn: () => playSuccessChime(2), fired: false }, // Bell -> Green tick
+    { time: 19.10, fn: () => playSuccessChime(4), fired: false }, // Search -> Green tick
+    { time: 19.65, fn: playWhoosh, fired: false },      // "ezsites.dev" slides in
+    { time: 19.75, fn: playFinalChime, fired: false }   // Final chime on ezsites.dev
+  ];
+
+  // Text Drawing Helper (Strictly kept between 55% [1056px] and 82% [1574px] of height)
+  function drawAnimatedText(lines, yStart, lineHeight, fontSize, color, t, animStart) {
+    const p = prog(t, animStart, 0.45);
+    if (p <= 0) return;
+    const ease = easeOutCubic(p);
+    const offsetY = (1 - ease) * 30; // Slides up 30px
+
+    ctx.save();
+    ctx.globalAlpha *= ease;
+    ctx.font = `800 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], W / 2, yStart + i * lineHeight + offsetY);
+    }
+    ctx.restore();
+  }
+
+  function drawSceneNumber(numStr, t, animStart) {
+    const p = prog(t, animStart, 0.4);
+    if (p <= 0) return;
+    const scale = easeOutBack(p);
+
+    ctx.save();
+    ctx.globalAlpha *= clamp(p * 1.5, 0, 1);
+    ctx.translate(W / 2, 1135); // 59.1% of height (inside 55%-82% zone)
+    ctx.scale(scale, scale);
+
+    // Subtle pill badge behind number
+    ctx.fillStyle = 'rgba(45, 212, 191, 0.12)';
+    roundRect(ctx, -70, -68, 140, 136, 36);
+    ctx.fill();
+
+    ctx.font = `900 96px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    ctx.fillStyle = ACCENT_COLOR;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(numStr, 0, 4);
+    ctx.restore();
+  }
+
+  // Flat Minimalist Icons
+  function drawToothIcon(ctx, x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    // Soft card background
+    ctx.fillStyle = CARD_BG;
+    ctx.strokeStyle = CARD_BORDER;
+    ctx.lineWidth = 5;
+    roundRect(ctx, -155, -155, 310, 310, 64);
+    ctx.fill();
+    ctx.stroke();
+
+    // Clean flat tooth silhouette
+    ctx.fillStyle = WHITE;
+    ctx.beginPath();
+    ctx.moveTo(0, -78);
+    ctx.bezierCurveTo(32, -98, 86, -86, 86, -26);
+    ctx.bezierCurveTo(86, 18, 66, 52, 54, 96);
+    ctx.bezierCurveTo(46, 122, 26, 120, 18, 84);
+    ctx.bezierCurveTo(10, 52, -10, 52, -18, 84);
+    ctx.bezierCurveTo(-26, 120, -46, 122, -54, 96);
+    ctx.bezierCurveTo(-66, 52, -86, 18, -86, -26);
+    ctx.bezierCurveTo(-86, -86, -32, -98, 0, -78);
+    ctx.closePath();
+    ctx.fill();
+
+    // Minimal clinic cross on tooth
+    ctx.fillStyle = ACCENT_COLOR;
+    roundRect(ctx, -11, -48, 22, 58, 6);
+    ctx.fill();
+    roundRect(ctx, -29, -30, 58, 22, 6);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  function drawQuestionBadge(ctx, x, y, scale) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = ACCENT_COLOR;
+    ctx.beginPath();
+    ctx.arc(0, 0, 56, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = BG_COLOR;
+    ctx.stroke();
+
+    ctx.font = `900 72px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    ctx.fillStyle = BG_COLOR;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('?', 0, 4);
+
+    ctx.restore();
+  }
+
+  function drawCalendarIcon(ctx, x, y, scale, crossProg) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    // Calendar Body
+    ctx.fillStyle = CARD_BG;
+    ctx.strokeStyle = WHITE;
+    ctx.lineWidth = 8;
+    roundRect(ctx, -140, -130, 280, 270, 36);
+    ctx.fill();
+    ctx.stroke();
+
+    // Header Bar
+    ctx.fillStyle = ACCENT_COLOR;
+    ctx.beginPath();
+    ctx.moveTo(-136, -55);
+    ctx.lineTo(136, -55);
+    ctx.lineTo(136, -96);
+    ctx.quadraticCurveTo(136, -126, 106, -126);
+    ctx.lineTo(-106, -126);
+    ctx.quadraticCurveTo(-136, -126, -136, -96);
+    ctx.closePath();
+    ctx.fill();
+
+    // Binder Rings
+    ctx.fillStyle = WHITE;
+    roundRect(ctx, -75, -162, 22, 56, 11);
+    ctx.fill();
+    roundRect(ctx, 53, -162, 22, 56, 11);
+    ctx.fill();
+
+    // Grid Dots
+    ctx.fillStyle = MUTED_WHITE;
+    const cols = [-75, 0, 75];
+    const rows = [0, 62];
+    for (let r of rows) {
+      for (let c of cols) {
+        roundRect(ctx, c - 20, r - 18, 40, 36, 8);
+        ctx.fill();
+      }
+    }
+
+    // Red Cross Overlay
+    if (crossProg > 0) {
+      const s = easeOutBack(crossProg);
+      ctx.save();
+      ctx.scale(s, s);
+
+      ctx.fillStyle = 'rgba(11, 18, 32, 0.72)';
+      ctx.beginPath();
+      ctx.arc(0, 15, 110, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = RED_COLOR;
+      ctx.lineWidth = 22;
+      ctx.lineCap = 'round';
+
+      ctx.beginPath();
+      ctx.moveTo(-60, -45);
+      ctx.lineTo(60, 75);
+      ctx.moveTo(60, -45);
+      ctx.lineTo(-60, 75);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  function drawBellIcon(ctx, x, y, scale, badgeProg) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    // Card container
+    ctx.fillStyle = CARD_BG;
+    ctx.strokeStyle = CARD_BORDER;
+    ctx.lineWidth = 5;
+    roundRect(ctx, -165, -165, 330, 330, 64);
+    ctx.fill();
+    ctx.stroke();
+
+    // Silent Bell Body (stays completely still, muted slate/white)
+    ctx.fillStyle = badgeProg > 0 ? '#64748B' : WHITE;
+    ctx.beginPath();
+    ctx.arc(0, -88, 18, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(-78, 52);
+    ctx.lineTo(-64, -22);
+    ctx.bezierCurveTo(-64, -76, 64, -76, 64, -22);
+    ctx.lineTo(78, 52);
+    ctx.quadraticCurveTo(96, 70, 96, 82);
+    ctx.lineTo(-96, 82);
+    ctx.quadraticCurveTo(-96, 70, -78, 52);
+    ctx.closePath();
+    ctx.fill();
+
+    // Clapper
+    ctx.beginPath();
+    ctx.arc(0, 96, 24, 0, Math.PI);
+    ctx.fill();
+
+    // Diagonal Mute Slash + Faded "MISSED" Badge
+    if (badgeProg > 0) {
+      const ease = easeOutCubic(badgeProg);
+
+      ctx.strokeStyle = RED_COLOR;
+      ctx.lineWidth = 12;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-85, -80);
+      ctx.lineTo(85, 85);
+      ctx.stroke();
+
+      ctx.save();
+      ctx.globalAlpha *= ease * 0.78; // Faded badge look
+      ctx.translate(105, -110);
+      ctx.scale(easeOutBack(badgeProg), easeOutBack(badgeProg));
+
+      ctx.fillStyle = '#1E293B';
+      ctx.strokeStyle = RED_COLOR;
+      ctx.lineWidth = 5;
+      roundRect(ctx, -98, -34, 196, 68, 34);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = `800 32px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      ctx.fillStyle = '#FCA5A5';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('MISSED', 0, 2);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  function drawSearchSceneVisual(ctx, x, y, scale, emptyProg) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    // Search Bar Box
+    ctx.fillStyle = CARD_BG;
+    ctx.strokeStyle = ACCENT_COLOR;
+    ctx.lineWidth = 6;
+    roundRect(ctx, -330, -145, 660, 110, 55);
+    ctx.fill();
+    ctx.stroke();
+
+    // Magnifying glass icon inside bar
+    ctx.strokeStyle = ACCENT_COLOR;
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.arc(-260, -95, 22, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-243, -78);
+    ctx.lineTo(-226, -61);
+    ctx.stroke();
+
+    // Search Query Text
+    ctx.font = `700 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    ctx.fillStyle = WHITE;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Dental clinic near me', -195, -90);
+
+    // Dropdown Empty Result Box
+    if (emptyProg > 0) {
+      const ease = easeOutCubic(emptyProg);
+      ctx.save();
+      ctx.globalAlpha *= ease;
+      ctx.translate(0, (1 - ease) * 20);
+
+      ctx.fillStyle = CARD_BG;
+      ctx.strokeStyle = CARD_BORDER;
+      ctx.lineWidth = 5;
+      roundRect(ctx, -330, -5, 660, 185, 32);
+      ctx.fill();
+      ctx.stroke();
+
+      // Dashed missing slot
+      ctx.setLineDash([14, 12]);
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 4;
+      roundRect(ctx, -290, 28, 580, 118, 20);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Red dot + "Your clinic: Not found"
+      ctx.fillStyle = RED_COLOR;
+      ctx.beginPath();
+      ctx.arc(-195, 87, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.font = `700 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+      ctx.fillStyle = MUTED_WHITE;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Your clinic: Not found', -165, 88);
+
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  function drawMiniCardOrTick(ctx, x, y, type, appearProg, tickProg) {
+    if (appearProg <= 0) return;
+    const scale = easeOutBack(appearProg);
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+
+    const isTicked = tickProg > 0;
+    const tickEase = easeOutBack(tickProg);
+
+    // Card Background
+    ctx.fillStyle = isTicked ? 'rgba(45, 212, 191, 0.14)' : CARD_BG;
+    ctx.strokeStyle = isTicked ? GREEN_COLOR : CARD_BORDER;
+    ctx.lineWidth = 6;
+    roundRect(ctx, -110, -110, 220, 220, 48);
+    ctx.fill();
+    ctx.stroke();
+
+    // Original Mini Icon (fades out as tick scales in)
+    if (tickProg < 0.5) {
+      ctx.save();
+      ctx.globalAlpha *= (1 - tickProg * 2);
+      ctx.strokeStyle = WHITE;
+      ctx.fillStyle = WHITE;
+      ctx.lineWidth = 7;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (type === 'calendar') {
+        roundRect(ctx, -52, -46, 104, 96, 16);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-52, -16);
+        ctx.lineTo(52, -16);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-26, -62);
+        ctx.lineTo(-26, -36);
+        ctx.moveTo(26, -62);
+        ctx.lineTo(26, -36);
+        ctx.stroke();
+      } else if (type === 'bell') {
+        ctx.beginPath();
+        ctx.moveTo(-42, 26);
+        ctx.lineTo(-34, -12);
+        ctx.bezierCurveTo(-34, -46, 34, -46, 34, -12);
+        ctx.lineTo(42, 26);
+        ctx.lineTo(-42, 26);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(0, 40, 12, 0, Math.PI);
+        ctx.fill();
+      } else if (type === 'search') {
+        ctx.beginPath();
+        ctx.arc(-8, -8, 34, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(18, 18);
+        ctx.lineTo(46, 46);
+        ctx.lineWidth = 10;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Green Tick (scales in with bounce)
+    if (tickProg > 0) {
+      ctx.save();
+      ctx.scale(tickEase, tickEase);
+
+      ctx.fillStyle = GREEN_COLOR;
+      ctx.beginPath();
+      ctx.arc(0, 0, 62, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = BG_COLOR;
+      ctx.lineWidth = 14;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-28, 2);
+      ctx.lineTo(-6, 24);
+      ctx.lineTo(30, -18);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  // Main Frame Renderer
+  function renderFrame(t) {
+    // Clear Canvas
+    ctx.fillStyle = BG_COLOR;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle top progress bar (thin, unobtrusive, at very top edge)
+    const totalProgress = clamp(t / 22.0, 0, 1);
+    ctx.fillStyle = 'rgba(45, 212, 191, 0.25)';
+    ctx.fillRect(0, 0, W * totalProgress, 6);
+
+    // ==========================================
+    // SCENE 1: 0 - 4s HOOK
+    // ==========================================
+    const a1 = sceneAlpha(t, 0.0, 4.0, false);
+    if (a1 > 0) {
+      ctx.save();
+      ctx.globalAlpha = a1;
+
+      const iconScale = easeOutBack(prog(t, 0.25, 0.45));
+      if (iconScale > 0) {
+        drawToothIcon(ctx, W / 2, 740, iconScale);
+      }
+
+      const qScale = easeOutBack(prog(t, 1.05, 0.4));
+      if (qScale > 0) {
+        drawQuestionBadge(ctx, W / 2 + 125, 585, qScale);
+      }
+
+      drawAnimatedText(
+        ['Why do patients visit', 'but never book?'],
+        1220, // 63.5% height
+        106,
+        84,
+        WHITE,
+        t,
+        0.65
+      );
+
+      ctx.restore();
+    }
+
+    // ==========================================
+    // SCENE 2: 4 - 8s (Reason 1)
+    // ==========================================
+    const a2 = sceneAlpha(t, 4.0, 8.0, false);
+    if (a2 > 0) {
+      ctx.save();
+      ctx.globalAlpha = a2;
+
+      const calScale = easeOutBack(prog(t, 4.35, 0.45));
+      const crossProg = prog(t, 5.20, 0.35);
+      if (calScale > 0) {
+        drawCalendarIcon(ctx, W / 2, 720, calScale, crossProg);
+      }
+
+      drawSceneNumber('1', t, 4.15);
+
+      drawAnimatedText(
+        ['No online booking', 'option'],
+        1315, // 68.5% height
+        104,
+        84,
+        WHITE,
+        t,
+        4.65
+      );
+
+      ctx.restore();
+    }
+
+    // ==========================================
+    // SCENE 3: 8 - 13s (Reason 2)
+    // ==========================================
+    const a3 = sceneAlpha(t, 8.0, 13.0, false);
+    if (a3 > 0) {
+      ctx.save();
+      ctx.globalAlpha = a3;
+
+      const bellScale = easeOutBack(prog(t, 8.35, 0.45));
+      const badgeProg = prog(t, 9.30, 0.40);
+      if (bellScale > 0) {
+        drawBellIcon(ctx, W / 2, 720, bellScale, badgeProg);
+      }
+
+      drawSceneNumber('2', t, 8.15);
+
+      drawAnimatedText(
+        ['No reminders,', 'so they forget'],
+        1315, // 68.5% height
+        104,
+        84,
+        WHITE,
+        t,
+        8.65
+      );
+
+      ctx.restore();
+    }
+
+    // ==========================================
+    // SCENE 4: 13 - 17s (Reason 3)
+    // ==========================================
+    const a4 = sceneAlpha(t, 13.0, 17.0, false);
+    if (a4 > 0) {
+      ctx.save();
+      ctx.globalAlpha = a4;
+
+      const searchScale = easeOutBack(prog(t, 13.35, 0.45));
+      const emptyProg = prog(t, 14.30, 0.40);
+      if (searchScale > 0) {
+        drawSearchSceneVisual(ctx, W / 2, 720, searchScale, emptyProg);
+      }
+
+      drawSceneNumber('3', t, 13.15);
+
+      drawAnimatedText(
+        ['Not visible', 'on Google'],
+        1315, // 68.5% height
+        104,
+        84,
+        WHITE,
+        t,
+        13.65
+      );
+
+      ctx.restore();
+    }
+
+    // ==========================================
+    // SCENE 5: 17 - 22s CTA (Freezes at end)
+    // ==========================================
+    const a5 = sceneAlpha(t, 17.0, 22.0, true);
+    if (a5 > 0) {
+      ctx.save();
+      ctx.globalAlpha = a5;
+
+      const rowAppear = prog(t, 17.20, 0.45);
+      const tick1 = prog(t, 18.00, 0.38);
+      const tick2 = prog(t, 18.55, 0.38);
+      const tick3 = prog(t, 19.10, 0.38);
+
+      drawMiniCardOrTick(ctx, W / 2 - 270, 740, 'calendar', rowAppear, tick1);
+      drawMiniCardOrTick(ctx, W / 2,       740, 'bell',     rowAppear, tick2);
+      drawMiniCardOrTick(ctx, W / 2 + 270, 740, 'search',   rowAppear, tick3);
+
+      // Line 1: Headline
+      drawAnimatedText(
+        ['Fix all 3 with', 'one website.'],
+        1155, // 60.1% height
+        104,
+        84,
+        WHITE,
+        t,
+        17.50
+      );
+
+      // Line 2: Brand CTA in Accent Color
+      const ctaProg = prog(t, 19.65, 0.45);
+      if (ctaProg > 0) {
+        const ease = easeOutCubic(ctaProg);
+        const offsetY = (1 - ease) * 30;
+
+        ctx.save();
+        ctx.globalAlpha *= ease;
+        ctx.translate(W / 2, 1455 + offsetY); // 75.7% height (well above 82% limit)
+
+        // Subtle pill frame around ezsites.dev
+        ctx.fillStyle = 'rgba(45, 212, 191, 0.12)';
+        ctx.strokeStyle = ACCENT_COLOR;
+        ctx.lineWidth = 4;
+        roundRect(ctx, -310, -72, 620, 144, 72);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = `900 88px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+        ctx.fillStyle = ACCENT_COLOR;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('ezsites.dev', 0, 4);
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // Draw initial idle preview frame behind overlay
+  renderFrame(0);
+
+  // Master Playback Loop driven by single shared AudioContext timeline
+  let isPlaying = false;
+  let startAudioTime = 0;
+  const DURATION = 22.0;
+
+  function tickLoop() {
+    if (!isPlaying) return;
+
+    const elapsed = audioCtx.currentTime - startAudioTime;
+    const clampedTime = Math.min(elapsed, DURATION);
+
+    // Trigger any due sound effects on the exact shared timeline
+    for (let i = 0; i < soundEvents.length; i++) {
+      const ev = soundEvents[i];
+      if (!ev.fired && clampedTime >= ev.time) {
+        ev.fired = true;
+        ev.fn();
+      }
+    }
+
+    renderFrame(clampedTime);
+
+    if (elapsed < DURATION) {
+      requestAnimationFrame(tickLoop);
+    } else {
+      // Freeze cleanly on final CTA frame at 22.0s
+      renderFrame(DURATION);
+      isPlaying = false;
+    }
+  }
+
+  function startReel() {
+    if (isPlaying) return;
+    initAudio();
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    overlay.classList.add('hidden');
+    startAudioTime = audioCtx.currentTime;
+    isPlaying = true;
+    requestAnimationFrame(tickLoop);
+  }
+
+  overlay.addEventListener('click', startReel, { once: true });
+  overlay.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    startReel();
+  }, { once: true, passive: false });
+})();
+</script>
+</body>
+</html>
