@@ -1,0 +1,1633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ezsites - How Patients Choose a Dentist (Instagram Reel Generator)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #050B12;
+      color: #F6FBFB;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      gap: 16px;
+    }
+    .canvas-wrap {
+      position: relative;
+      height: min(76vh, 780px);
+      aspect-ratio: 9 / 16;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.1);
+      background: #07121F;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .controls {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      background: #0FB5AE;
+      color: #07121F;
+      border: none;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 16px;
+      padding: 13px 26px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+    }
+    button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      background: #14cac2;
+    }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    #exportBtn {
+      background: #F6FBFB;
+      color: #0B3C5D;
+    }
+    #exportBtn:hover:not(:disabled) {
+      background: #ffffff;
+    }
+    #statusText {
+      font-size: 14px;
+      font-weight: 700;
+      color: #93B3C8;
+      min-height: 22px;
+      text-align: center;
+    }
+    #errorBox {
+      display: none;
+      max-width: 540px;
+      background: rgba(255, 107, 94, 0.14);
+      border: 1px solid #FF6B5E;
+      color: #FF9E96;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: center;
+    }
+    #resultArea {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+      background: rgba(255,255,255,0.04);
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    #resultArea a {
+      color: #0FB5AE;
+      font-weight: 800;
+      font-size: 14px;
+      text-decoration: underline;
+    }
+    #resultVideo {
+      width: 180px;
+      aspect-ratio: 9 / 16;
+      border-radius: 10px;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="canvas-wrap">
+    <canvas id="reelCanvas" width="1080" height="1920"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="previewBtn" disabled>▶ Preview</button>
+    <button id="exportBtn" disabled>⬇ Export MP4</button>
+  </div>
+
+  <div id="statusText">Loading fonts...</div>
+  <div id="errorBox"></div>
+
+  <div id="resultArea">
+    <a id="downloadAgainLink" href="#" download="ezsites-how-patients-choose-reel.mp4">⬇ Download again</a>
+    <video id="resultVideo" controls playsinline></video>
+  </div>
+
+  <script type="module">
+    import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm";
+
+    // ============================================================================
+    // FILL-INS (CONSTANTS)
+    // ============================================================================
+    const BRAND = "ezsites";
+    const CONTACT = "+91 8102253186";
+    const CLINIC_DEMO = "Smile Care Dental Clinic";
+    const DURATION = 22;
+    const FPS = 30;
+    const WIDTH = 1080;
+    const HEIGHT = 1920;
+
+    // Palette
+    const COL_TEAL = "#0FB5AE";
+    const COL_BLUE = "#0B3C5D";
+    const COL_WHITE = "#F6FBFB";
+    const COL_CORAL = "#FF6B5E";
+    const COL_NAVY = "#07121F";
+
+    // ============================================================================
+    // SOUND EFFECTS CUES & WEB AUDIO SYNTHESIS
+    // ============================================================================
+    const SFX_CUES = [
+      // SCENE 1 (0 - 4s)
+      { t: 0.2, type: "whoosh" },
+      { t: 0.5, type: "tick" },
+      { t: 0.9, type: "pop" },
+      { t: 1.8, type: "pop" },
+
+      // SCENE 2 (4 - 8s)
+      { t: 4.0, type: "whoosh" },
+      { t: 4.4, type: "tick" },
+      { t: 4.8, type: "pop" },
+      { t: 5.3, type: "type" },
+      { t: 5.45, type: "type" },
+      { t: 5.6, type: "type" },
+      { t: 5.75, type: "type" },
+      { t: 5.9, type: "type" },
+      { t: 6.6, type: "slide" },
+      { t: 6.9, type: "slide" },
+      { t: 7.2, type: "slide" },
+
+      // SCENE 3 (8 - 12s)
+      { t: 8.0, type: "whoosh" },
+      { t: 8.4, type: "tick" },
+      { t: 8.8, type: "pop" },
+      { t: 9.3, type: "tick" },
+      { t: 9.5, type: "tick" },
+      { t: 9.7, type: "tick" },
+      { t: 9.9, type: "tick" },
+      { t: 10.1, type: "tick" },
+      { t: 10.5, type: "chime" },
+      { t: 10.9, type: "slide" },
+      { t: 11.1, type: "slide" },
+      { t: 11.3, type: "slide" },
+
+      // SCENE 4 (12 - 16s)
+      { t: 12.0, type: "whoosh" },
+      { t: 12.4, type: "tick" },
+      { t: 12.8, type: "pop" },
+      { t: 13.6, type: "empty-ping" },
+      { t: 14.4, type: "chime" },
+      { t: 14.4, type: "pop" },
+
+      // SCENE 5 (16 - 22s)
+      { t: 16.0, type: "whoosh" },
+      { t: 16.8, type: "pop" },
+      { t: 18.4, type: "slide" },
+      { t: 19.6, type: "pop" },
+      { t: 20.2, type: "final-chime" }
+    ];
+
+    function createDeterministicNoiseBuffer(ctx, durationSec) {
+      const length = Math.ceil(ctx.sampleRate * durationSec);
+      const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let seed = 1337420;
+      for (let i = 0; i < length; i++) {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        data[i] = (seed / 0xffffffff) * 2 - 1;
+      }
+      return buffer;
+    }
+
+    function createMasterChain(ctx, destinationNode) {
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-12, 0);
+      compressor.knee.setValueAtTime(10, 0);
+      compressor.ratio.setValueAtTime(8, 0);
+      compressor.attack.setValueAtTime(0.003, 0);
+      compressor.release.setValueAtTime(0.15, 0);
+
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(0.25, 0); // subtle 0.25 master gain
+
+      masterGain.connect(compressor);
+      compressor.connect(destinationNode || ctx.destination);
+      return masterGain;
+    }
+
+    function synthWhoosh(ctx, dest, t, noiseBuf) {
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.Q.setValueAtTime(1.8, t);
+      filter.frequency.setValueAtTime(400, t);
+      filter.frequency.exponentialRampToValueAtTime(2500, t + 0.35);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.32, t + 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(dest);
+      src.start(t);
+      src.stop(t + 0.36);
+    }
+
+    function synthPop(ctx, dest, t) {
+      const osc = ctx.createOscillator();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(700, t);
+      osc.frequency.exponentialRampToValueAtTime(250, t + 0.12);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.48, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+
+      osc.connect(gain);
+      gain.connect(dest);
+      osc.start(t);
+      osc.stop(t + 0.13);
+    }
+
+    function synthTick(ctx, dest, t) {
+      const osc = ctx.createOscillator();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(1200, t);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.35, t + 0.004);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+
+      osc.connect(gain);
+      gain.connect(dest);
+      osc.start(t);
+      osc.stop(t + 0.055);
+    }
+
+    function synthType(ctx, dest, t, noiseBuf) {
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.Q.setValueAtTime(2.5, t);
+      filter.frequency.setValueAtTime(2200, t);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.28, t + 0.003);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(dest);
+      src.start(t);
+      src.stop(t + 0.035);
+    }
+
+    function synthSlide(ctx, dest, t, noiseBuf) {
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.Q.setValueAtTime(2.0, t);
+      filter.frequency.setValueAtTime(600, t);
+      filter.frequency.exponentialRampToValueAtTime(1600, t + 0.2);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.18, t + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+
+      src.connect(filter);
+      filter.connect(gain);
+      gain.connect(dest);
+      src.start(t);
+      src.stop(t + 0.21);
+    }
+
+    function synthChime(ctx, dest, t) {
+      const notes = [
+        { freq: 880, offset: 0, dur: 0.35 },
+        { freq: 1320, offset: 0.09, dur: 0.4 }
+      ];
+      notes.forEach(n => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        const start = t + n.offset;
+        osc.frequency.setValueAtTime(n.freq, start);
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.linearRampToValueAtTime(0.38, start + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + n.dur);
+
+        osc.connect(gain);
+        gain.connect(dest);
+        osc.start(start);
+        osc.stop(start + n.dur + 0.01);
+      });
+    }
+
+    function synthEmptyPing(ctx, dest, t) {
+      const notes = [
+        { freq: 520, offset: 0, dur: 0.18 },
+        { freq: 390, offset: 0.12, dur: 0.23 }
+      ];
+      notes.forEach(n => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        const start = t + n.offset;
+        osc.frequency.setValueAtTime(n.freq, start);
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.linearRampToValueAtTime(0.32, start + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + n.dur);
+
+        osc.connect(gain);
+        gain.connect(dest);
+        osc.start(start);
+        osc.stop(start + n.dur + 0.01);
+      });
+    }
+
+    function synthFinalChime(ctx, dest, t) {
+      const notes = [
+        { freq: 660, offset: 0, dur: 0.65 },
+        { freq: 880, offset: 0.11, dur: 0.72 },
+        { freq: 1320, offset: 0.22, dur: 0.8 }
+      ];
+      notes.forEach(n => {
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        const start = t + n.offset;
+        osc.frequency.setValueAtTime(n.freq, start);
+
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.linearRampToValueAtTime(0.36, start + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + n.dur);
+
+        osc.connect(gain);
+        gain.connect(dest);
+        osc.start(start);
+        osc.stop(start + n.dur + 0.02);
+      });
+    }
+
+    function scheduleAllCues(ctx, baseTime = 0, destinationNode = null) {
+      const master = createMasterChain(ctx, destinationNode);
+      const noiseBuf = createDeterministicNoiseBuffer(ctx, 0.5);
+      for (const cue of SFX_CUES) {
+        const t = baseTime + cue.t;
+        switch (cue.type) {
+          case "whoosh": synthWhoosh(ctx, master, t, noiseBuf); break;
+          case "pop": synthPop(ctx, master, t); break;
+          case "tick": synthTick(ctx, master, t); break;
+          case "type": synthType(ctx, master, t, noiseBuf); break;
+          case "slide": synthSlide(ctx, master, t, noiseBuf); break;
+          case "chime": synthChime(ctx, master, t); break;
+          case "empty-ping": synthEmptyPing(ctx, master, t); break;
+          case "final-chime": synthFinalChime(ctx, master, t); break;
+        }
+      }
+    }
+
+    // ============================================================================
+    // ANIMATION STATE & GSAP MASTER TIMELINE
+    // ============================================================================
+    const state = {};
+
+    function resetState() {
+      Object.assign(state, {
+        // Background transitions: 0 = Dark Navy, 1 = Soft White, 2 = Teal-to-Blue Gradient
+        bgLightMix: 0,
+        bgFinalMix: 0,
+
+        // Scene 1
+        s1Alpha: 0,
+        s1HeadY: 40, s1HeadOpacity: 0,
+        s1ChipScale: 0, s1ChipOpacity: 0,
+        s1ToothScale: 0, s1ToothOpacity: 0,
+        s1QScale: 0, s1QOpacity: 0,
+
+        // Scene 2
+        s2Alpha: 0,
+        s2HeadY: 40, s2HeadOpacity: 0,
+        s2ChipScale: 0, s2ChipOpacity: 0,
+        s2PhoneY: 60, s2PhoneScale: 0.92, s2PhoneOpacity: 0,
+        s2TypeChars: 0,
+        s2Card1X: 90, s2Card1Opacity: 0,
+        s2Card2X: 90, s2Card2Opacity: 0,
+        s2Card3X: 90, s2Card3Opacity: 0,
+
+        // Scene 3
+        s3Alpha: 0,
+        s3HeadY: 40, s3HeadOpacity: 0,
+        s3ChipScale: 0, s3ChipOpacity: 0,
+        s3CardY: 50, s3CardScale: 0.94, s3CardOpacity: 0,
+        s3Star1: 0, s3Star2: 0, s3Star3: 0, s3Star4: 0, s3Star5: 0,
+        s3RatingScale: 0, s3RatingOpacity: 0,
+        s3Tile1Y: 40, s3Tile1Opacity: 0,
+        s3Tile2Y: 40, s3Tile2Opacity: 0,
+        s3Tile3Y: 40, s3Tile3Opacity: 0,
+
+        // Scene 4
+        s4Alpha: 0,
+        s4HeadY: 40, s4HeadOpacity: 0,
+        s4ChipScale: 0, s4ChipOpacity: 0,
+        s4CardsY: 45, s4CardsOpacity: 0,
+        s4CardAOpacity: 1,
+        s4CardBScale: 1,
+        s4CardBFill: 0,
+        s4TickScale: 0,
+
+        // Scene 5
+        s5Alpha: 0,
+        s5HeadY: 40, s5HeadOpacity: 0,
+        s5BrandScale: 0.85, s5BrandOpacity: 0,
+        s5SubY: 25, s5SubOpacity: 0,
+        s5BtnScale: 0, s5BtnOpacity: 0,
+        s5Pulse: 0
+      });
+    }
+
+    resetState();
+    const tl = gsap.timeline({ paused: true });
+
+    function buildTimeline() {
+      tl.clear();
+      resetState();
+
+      // ---------------- SCENE 1 (0 - 4s) ----------------
+      tl.set(state, { s1Alpha: 1 }, 0);
+      tl.to(state, { s1HeadY: 0, s1HeadOpacity: 1, duration: 0.5, ease: "power3.out" }, 0.2);
+      tl.to(state, { s1ChipScale: 1, s1ChipOpacity: 1, duration: 0.35, ease: "back.out(1.8)" }, 0.5);
+      tl.to(state, { s1ToothScale: 1, s1ToothOpacity: 1, duration: 0.5, ease: "back.out(1.6)" }, 0.9);
+      tl.to(state, { s1QScale: 1, s1QOpacity: 1, duration: 0.45, ease: "back.out(2.0)" }, 1.8);
+      tl.to(state, { s1Alpha: 0, s1HeadY: -25, duration: 0.3, ease: "power2.in" }, 3.7);
+
+      // ---------------- SCENE 2 (4 - 8s) ----------------
+      tl.set(state, { s2Alpha: 1 }, 4.0);
+      tl.to(state, { s2HeadY: 0, s2HeadOpacity: 1, duration: 0.5, ease: "power3.out" }, 4.0);
+      tl.to(state, { s2ChipScale: 1, s2ChipOpacity: 1, duration: 0.35, ease: "back.out(1.8)" }, 4.4);
+      tl.to(state, { s2PhoneY: 0, s2PhoneScale: 1, s2PhoneOpacity: 1, duration: 0.5, ease: "power3.out" }, 4.8);
+      // Typing "dentist near me" (15 chars) synced across 5.3s - 6.0s
+      tl.to(state, { s2TypeChars: 15, duration: 0.72, ease: "none" }, 5.3);
+      tl.to(state, { s2Card1X: 0, s2Card1Opacity: 1, duration: 0.35, ease: "power3.out" }, 6.6);
+      tl.to(state, { s2Card2X: 0, s2Card2Opacity: 1, duration: 0.35, ease: "power3.out" }, 6.9);
+      tl.to(state, { s2Card3X: 0, s2Card3Opacity: 1, duration: 0.35, ease: "power3.out" }, 7.2);
+      tl.to(state, { s2Alpha: 0, s2HeadY: -25, duration: 0.3, ease: "power2.in" }, 7.7);
+
+      // ---------------- SCENE 3 (8 - 12s) ----------------
+      tl.to(state, { bgLightMix: 1, duration: 0.45, ease: "power2.inOut" }, 7.85);
+      tl.set(state, { s3Alpha: 1 }, 8.0);
+      tl.to(state, { s3HeadY: 0, s3HeadOpacity: 1, duration: 0.5, ease: "power3.out" }, 8.0);
+      tl.to(state, { s3ChipScale: 1, s3ChipOpacity: 1, duration: 0.35, ease: "back.out(1.8)" }, 8.4);
+      tl.to(state, { s3CardY: 0, s3CardScale: 1, s3CardOpacity: 1, duration: 0.5, ease: "power3.out" }, 8.8);
+      tl.to(state, { s3Star1: 1, duration: 0.18, ease: "back.out(2)" }, 9.3);
+      tl.to(state, { s3Star2: 1, duration: 0.18, ease: "back.out(2)" }, 9.5);
+      tl.to(state, { s3Star3: 1, duration: 0.18, ease: "back.out(2)" }, 9.7);
+      tl.to(state, { s3Star4: 1, duration: 0.18, ease: "back.out(2)" }, 9.9);
+      tl.to(state, { s3Star5: 1, duration: 0.18, ease: "back.out(2)" }, 10.1);
+      tl.to(state, { s3RatingScale: 1, s3RatingOpacity: 1, duration: 0.4, ease: "back.out(1.8)" }, 10.5);
+      tl.to(state, { s3Tile1Y: 0, s3Tile1Opacity: 1, duration: 0.35, ease: "power3.out" }, 10.9);
+      tl.to(state, { s3Tile2Y: 0, s3Tile2Opacity: 1, duration: 0.35, ease: "power3.out" }, 11.1);
+      tl.to(state, { s3Tile3Y: 0, s3Tile3Opacity: 1, duration: 0.35, ease: "power3.out" }, 11.3);
+      tl.to(state, { s3Alpha: 0, s3HeadY: -25, duration: 0.3, ease: "power2.in" }, 11.7);
+
+      // ---------------- SCENE 4 (12 - 16s) ----------------
+      tl.set(state, { s4Alpha: 1 }, 12.0);
+      tl.to(state, { s4HeadY: 0, s4HeadOpacity: 1, duration: 0.5, ease: "power3.out" }, 12.0);
+      tl.to(state, { s4ChipScale: 1, s4ChipOpacity: 1, duration: 0.35, ease: "back.out(1.8)" }, 12.4);
+      tl.to(state, { s4CardsY: 0, s4CardsOpacity: 1, duration: 0.5, ease: "power3.out" }, 12.8);
+      tl.to(state, { s4CardAOpacity: 0.4, duration: 0.35, ease: "power2.out" }, 13.6);
+      tl.to(state, { s4CardBScale: 1.03, s4CardBFill: 1, duration: 0.4, ease: "back.out(1.7)" }, 14.4);
+      tl.to(state, { s4TickScale: 1, duration: 0.4, ease: "back.out(2.2)" }, 14.4);
+      tl.to(state, { s4Alpha: 0, s4HeadY: -25, duration: 0.3, ease: "power2.in" }, 15.7);
+
+      // ---------------- SCENE 5 (16 - 22s) ----------------
+      tl.to(state, { bgFinalMix: 1, duration: 0.5, ease: "power2.inOut" }, 15.85);
+      tl.set(state, { s5Alpha: 1 }, 16.0);
+      tl.to(state, { s5HeadY: 0, s5HeadOpacity: 1, duration: 0.55, ease: "power3.out" }, 16.0);
+      tl.to(state, { s5BrandScale: 1, s5BrandOpacity: 1, duration: 0.5, ease: "back.out(1.6)" }, 16.8);
+      tl.to(state, { s5SubY: 0, s5SubOpacity: 0.8, duration: 0.4, ease: "power3.out" }, 18.4);
+      tl.to(state, { s5BtnScale: 1, s5BtnOpacity: 1, duration: 0.45, ease: "back.out(1.7)" }, 19.6);
+      tl.to(state, { s5Pulse: 1, duration: 0.6, ease: "sine.inOut" }, 20.2);
+      tl.to(state, { s5Pulse: 0, duration: 0.6, ease: "sine.inOut" }, 20.8);
+      tl.to(state, { s5Pulse: 0.6, duration: 0.6, ease: "sine.inOut" }, 21.4);
+
+      // Pad timeline to exact DURATION (22.0s)
+      tl.set({}, {}, DURATION);
+    }
+
+    // ============================================================================
+    // CANVAS 2D DRAWING HELPERS
+    // ============================================================================
+    function lerpColor(hexA, hexB, t) {
+      const a = parseInt(hexA.slice(1), 16);
+      const b = parseInt(hexB.slice(1), 16);
+      const r1 = (a >> 16) & 255, g1 = (a >> 8) & 255, b1 = a & 255;
+      const r2 = (b >> 16) & 255, g2 = (b >> 8) & 255, b2 = b & 255;
+      const r = Math.round(r1 + (r2 - r1) * t);
+      const g = Math.round(g1 + (g2 - g1) * t);
+      const bl = Math.round(b1 + (b2 - b1) * t);
+      return `rgb(${r},${g},${bl})`;
+    }
+
+    function roundRectPath(ctx, x, y, w, h, r) {
+      const rad = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rad, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rad);
+      ctx.arcTo(x + w, y + h, x, y + h, rad);
+      ctx.arcTo(x, y + h, x, y, rad);
+      ctx.arcTo(x, y, x + w, y, rad);
+      ctx.closePath();
+    }
+
+    // Centered multi-line headline with keyword highlighting
+    // Safe zone X: 80..940 => Center X = 510
+    function drawHeadline(ctx, lines, highlightWord, yStart, yOffset, opacity, baseColor, highlightColor, fontSize = 92) {
+      if (opacity <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha *= opacity;
+      ctx.font = `800 ${fontSize}px 'Plus Jakarta Sans', sans-serif`;
+      ctx.textBaseline = "top";
+      const lineHeight = fontSize * 1.15;
+      const centerX = 510;
+
+      lines.forEach((lineText, idx) => {
+        const words = lineText.split(" ");
+        const spaceWidth = ctx.measureText(" ").width;
+        const wordMetrics = words.map(w => ({
+          word: w,
+          clean: w.replace(/[^a-zA-Z]/g, "").toLowerCase(),
+          width: ctx.measureText(w).width
+        }));
+        const totalWidth = wordMetrics.reduce((acc, m) => acc + m.width, 0) + spaceWidth * (words.length - 1);
+        let curX = centerX - totalWidth / 2;
+        const curY = yStart + yOffset + idx * lineHeight;
+
+        wordMetrics.forEach(m => {
+          const isHighlight = highlightWord && m.clean === highlightWord.toLowerCase();
+          ctx.fillStyle = isHighlight ? highlightColor : baseColor;
+          ctx.fillText(m.word, curX, curY);
+          curX += m.width + spaceWidth;
+        });
+      });
+      ctx.restore();
+    }
+
+    // Floating Chip (40px text, inside safe zone above headline at y=312..376)
+    function drawChip(ctx, text, scale, opacity, bgColor, textColor) {
+      if (opacity <= 0.001 || scale <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha *= opacity;
+      const cx = 510;
+      const cy = 344;
+      ctx.translate(cx, cy);
+      ctx.scale(scale, scale);
+
+      ctx.font = `700 40px 'Plus Jakarta Sans', sans-serif`;
+      const tw = ctx.measureText(text).width;
+      const pw = tw + 64;
+      const ph = 68;
+
+      roundRectPath(ctx, -pw / 2, -ph / 2, pw, ph, 34);
+      ctx.fillStyle = bgColor;
+      ctx.fill();
+
+      ctx.fillStyle = textColor;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, 0, 2);
+      ctx.restore();
+    }
+
+    // Tooth Vector Icon (drawn around 0,0 with radius ~r)
+    function drawToothIcon(ctx, cx, cy, size, fillStyle) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      const s = size / 200;
+      ctx.scale(s, s);
+
+      ctx.beginPath();
+      // Crown left & top lobes
+      ctx.moveTo(0, -78);
+      ctx.bezierCurveTo(-32, -105, -95, -95, -95, -35);
+      ctx.bezierCurveTo(-95, 10, -75, 42, -62, 88);
+      // Left root
+      ctx.bezierCurveTo(-55, 112, -36, 112, -26, 82);
+      // Inner root arch
+      ctx.bezierCurveTo(-14, 45, 14, 45, 26, 82);
+      // Right root
+      ctx.bezierCurveTo(36, 112, 55, 112, 62, 88);
+      // Right side up to crown
+      ctx.bezierCurveTo(75, 42, 95, 10, 95, -35);
+      ctx.bezierCurveTo(95, -95, 32, -105, 0, -78);
+      ctx.closePath();
+
+      ctx.fillStyle = fillStyle;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawStar(ctx, cx, cy, outerR, innerR, fillProgress) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+        const r = i % 2 === 0 ? outerR : innerR;
+        const x = Math.cos(angle) * r;
+        const y = Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = "#E2ECEF";
+      ctx.fill();
+
+      if (fillProgress > 0.01) {
+        ctx.save();
+        ctx.scale(fillProgress, fillProgress);
+        ctx.fillStyle = "#FFB800";
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    function drawMagnifierIcon(ctx, cx, cy, r, color) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(cx - 3, cy - 3, r * 0.65, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx + r * 0.35, cy + r * 0.35);
+      ctx.lineTo(cx + r * 0.85, cy + r * 0.85);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawPhoneHandsetIcon(ctx, cx, cy, size, color) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      const s = size / 64;
+      ctx.scale(s, s);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 6;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(-18, -22);
+      ctx.lineTo(-8, -22);
+      ctx.lineTo(-2, -8);
+      ctx.lineTo(-10, -2);
+      ctx.arcTo(-4, 10, 8, 16, 16);
+      ctx.lineTo(10, 2);
+      ctx.lineTo(24, 8);
+      ctx.lineTo(24, 18);
+      ctx.bezierCurveTo(24, 26, 6, 28, -10, 12);
+      ctx.bezierCurveTo(-26, -4, -24, -22, -18, -22);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCalendarIcon(ctx, cx, cy, size, color) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      const s = size / 64;
+      ctx.scale(s, s);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 5.5;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      roundRectPath(ctx, -24, -18, 48, 42, 8);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-24, -4);
+      ctx.lineTo(24, -4);
+      ctx.moveTo(-12, -26);
+      ctx.lineTo(-12, -12);
+      ctx.moveTo(12, -26);
+      ctx.lineTo(12, -12);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawTickIcon(ctx, cx, cy, radius, bgCol, tickCol) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fillStyle = bgCol;
+      ctx.fill();
+
+      ctx.strokeStyle = tickCol;
+      ctx.lineWidth = 6.5;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(-radius * 0.42, 0);
+      ctx.lineTo(-radius * 0.1, radius * 0.32);
+      ctx.lineTo(radius * 0.45, -radius * 0.28);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ============================================================================
+    // MASTER FRAME RENDERER
+    // ============================================================================
+    function drawFrame(ctx) {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      // 1. Background
+      if (state.bgFinalMix > 0.001) {
+        // Base light or dark first
+        ctx.fillStyle = lerpColor(COL_NAVY, COL_WHITE, state.bgLightMix);
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+        ctx.save();
+        ctx.globalAlpha = state.bgFinalMix;
+        const grad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+        grad.addColorStop(0, COL_TEAL);
+        grad.addColorStop(1, COL_BLUE);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        ctx.restore();
+      } else {
+        ctx.fillStyle = lerpColor(COL_NAVY, COL_WHITE, state.bgLightMix);
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      }
+
+      // ---------------- SCENE 1 ----------------
+      if (state.s1Alpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.s1Alpha;
+
+        drawChip(ctx, "3 simple steps", state.s1ChipScale, state.s1ChipOpacity, "rgba(15, 181, 174, 0.16)", COL_TEAL);
+        drawHeadline(
+          ctx,
+          ["How do patients", "pick a dentist?"],
+          "pick",
+          435,
+          state.s1HeadY,
+          state.s1HeadOpacity,
+          COL_WHITE,
+          COL_TEAL,
+          94
+        );
+
+        // Main visual in y=800..1450, centered at x=510, y=1140
+        if (state.s1ToothOpacity > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s1ToothOpacity;
+          ctx.translate(510, 1140);
+          ctx.scale(state.s1ToothScale, state.s1ToothScale);
+
+          // Soft circular halo behind tooth
+          ctx.beginPath();
+          ctx.arc(0, 0, 210, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(15, 181, 174, 0.10)";
+          ctx.fill();
+
+          drawToothIcon(ctx, 0, 10, 270, COL_TEAL);
+          ctx.restore();
+        }
+
+        // Coral question mark bubble above the tooth
+        if (state.s1QOpacity > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s1QOpacity;
+          const qx = 635, qy = 925;
+          ctx.translate(qx, qy);
+          ctx.scale(state.s1QScale, state.s1QScale);
+
+          ctx.beginPath();
+          ctx.arc(0, 0, 68, 0, Math.PI * 2);
+          ctx.fillStyle = COL_CORAL;
+          ctx.fill();
+
+          // Speech bubble tail
+          ctx.beginPath();
+          ctx.moveTo(-25, 55);
+          ctx.lineTo(-48, 82);
+          ctx.lineTo(-2, 65);
+          ctx.closePath();
+          ctx.fillStyle = COL_CORAL;
+          ctx.fill();
+
+          ctx.fillStyle = COL_WHITE;
+          ctx.font = "800 84px 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("?", 0, 5);
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      // ---------------- SCENE 2 ----------------
+      if (state.s2Alpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.s2Alpha;
+
+        drawChip(ctx, "Step 1", state.s2ChipScale, state.s2ChipOpacity, "rgba(15, 181, 174, 0.16)", COL_TEAL);
+        drawHeadline(
+          ctx,
+          ["They search", "on Google"],
+          "search",
+          435,
+          state.s2HeadY,
+          state.s2HeadOpacity,
+          COL_WHITE,
+          COL_TEAL,
+          94
+        );
+
+        // Phone mockup inside y=800..1450
+        if (state.s2PhoneOpacity > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s2PhoneOpacity;
+          const px = 510, py = 1125 + state.s2PhoneY;
+          ctx.translate(px, py);
+          ctx.scale(state.s2PhoneScale, state.s2PhoneScale);
+
+          const pw = 660, ph = 630;
+          // Soft shadow
+          ctx.save();
+          ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+          ctx.shadowBlur = 40;
+          ctx.shadowOffsetY = 20;
+          roundRectPath(ctx, -pw / 2, -ph / 2, pw, ph, 60);
+          ctx.fillStyle = "#112236";
+          ctx.fill();
+          ctx.restore();
+
+          // Dark bezel stroke
+          roundRectPath(ctx, -pw / 2, -ph / 2, pw, ph, 60);
+          ctx.lineWidth = 6;
+          ctx.strokeStyle = "#223B59";
+          ctx.stroke();
+
+          // Inner screen
+          const sw = pw - 36, sh = ph - 36;
+          roundRectPath(ctx, -sw / 2, -sh / 2, sw, sh, 44);
+          ctx.fillStyle = "#0B1929";
+          ctx.fill();
+
+          // Notch
+          roundRectPath(ctx, -85, -sh / 2 + 14, 170, 26, 13);
+          ctx.fillStyle = "#050D17";
+          ctx.fill();
+
+          // White search bar
+          const sbX = -sw / 2 + 34, sbY = -sh / 2 + 68, sbW = sw - 68, sbH = 86;
+          roundRectPath(ctx, sbX, sbY, sbW, sbH, 43);
+          ctx.fillStyle = COL_WHITE;
+          ctx.fill();
+
+          drawMagnifierIcon(ctx, sbX + 48, sbY + sbH / 2, 22, COL_TEAL);
+
+          // Typed text "dentist near me"
+          const fullQuery = "dentist near me";
+          const count = Math.round(state.s2TypeChars);
+          const shownQuery = fullQuery.slice(0, count);
+          ctx.font = "700 40px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillStyle = COL_BLUE;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(shownQuery, sbX + 92, sbY + sbH / 2 + 2);
+
+          // Three result cards below search bar
+          const cards = [
+            { y: sbY + 118, xOff: state.s2Card1X, op: state.s2Card1Opacity, highlight: true },
+            { y: sbY + 238, xOff: state.s2Card2X, op: state.s2Card2Opacity, highlight: false },
+            { y: sbY + 358, xOff: state.s2Card3X, op: state.s2Card3Opacity, highlight: false }
+          ];
+
+          cards.forEach(c => {
+            if (c.op <= 0.001) return;
+            ctx.save();
+            ctx.globalAlpha *= c.op;
+            ctx.translate(c.xOff, 0);
+            roundRectPath(ctx, sbX, c.y, sbW, 98, 22);
+            ctx.fillStyle = "#152940";
+            ctx.fill();
+            if (c.highlight) {
+              ctx.lineWidth = 4.5;
+              ctx.strokeStyle = COL_TEAL;
+              ctx.stroke();
+            }
+            // Grey placeholder bars inside result card
+            roundRectPath(ctx, sbX + 28, c.y + 26, sbW * 0.52, 20, 10);
+            ctx.fillStyle = c.highlight ? COL_TEAL : "#415D7D";
+            ctx.fill();
+
+            roundRectPath(ctx, sbX + 28, c.y + 58, sbW * 0.32, 14, 7);
+            ctx.fillStyle = "#2B4460";
+            ctx.fill();
+            ctx.restore();
+          });
+
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      // ---------------- SCENE 3 ----------------
+      if (state.s3Alpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.s3Alpha;
+
+        drawChip(ctx, "Step 2", state.s3ChipScale, state.s3ChipOpacity, "rgba(15, 181, 174, 0.14)", COL_TEAL);
+        drawHeadline(
+          ctx,
+          ["They check reviews", "and photos"],
+          "reviews",
+          435,
+          state.s3HeadY,
+          state.s3HeadOpacity,
+          COL_BLUE,
+          COL_TEAL,
+          92
+        );
+
+        // White clinic card in y=800..1450
+        if (state.s3CardOpacity > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s3CardOpacity;
+          const cx = 510, cy = 1135 + state.s3CardY;
+          ctx.translate(cx, cy);
+          ctx.scale(state.s3CardScale, state.s3CardScale);
+
+          const cw = 840, ch = 580;
+          ctx.save();
+          ctx.shadowColor = "rgba(11, 60, 93, 0.12)";
+          ctx.shadowBlur = 45;
+          ctx.shadowOffsetY = 20;
+          roundRectPath(ctx, -cw / 2, -ch / 2, cw, ch, 44);
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fill();
+          ctx.restore();
+
+          // Clinic Name
+          ctx.font = "800 50px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillStyle = COL_BLUE;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "top";
+          ctx.fillText(CLINIC_DEMO, 0, -ch / 2 + 52);
+
+          // 5 Stars + 4.8 Rating Row
+          const starY = -ch / 2 + 175;
+          const starStartX = -265;
+          const starGap = 86;
+          const starProg = [state.s3Star1, state.s3Star2, state.s3Star3, state.s3Star4, state.s3Star5];
+          for (let i = 0; i < 5; i++) {
+            drawStar(ctx, starStartX + i * starGap, starY, 34, 15, starProg[i]);
+          }
+
+          if (state.s3RatingOpacity > 0.001) {
+            ctx.save();
+            ctx.globalAlpha *= state.s3RatingOpacity;
+            ctx.translate(225, starY);
+            ctx.scale(state.s3RatingScale, state.s3RatingScale);
+            ctx.font = "800 72px 'Plus Jakarta Sans', sans-serif";
+            ctx.fillStyle = COL_BLUE;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("4.8", 0, 4);
+            ctx.restore();
+          }
+
+          // Three photo tiles below
+          const tileW = 220, tileH = 210, tileGap = 32;
+          const tiles = [
+            { x: -tileW - tileGap, yOff: state.s3Tile1Y, op: state.s3Tile1Opacity, tint: "rgba(15, 181, 174, 0.16)" },
+            { x: 0, yOff: state.s3Tile2Y, op: state.s3Tile2Opacity, tint: "rgba(15, 181, 174, 0.24)" },
+            { x: tileW + tileGap, yOff: state.s3Tile3Y, op: state.s3Tile3Opacity, tint: "rgba(15, 181, 174, 0.16)" }
+          ];
+          const tileTopY = -ch / 2 + 295;
+
+          tiles.forEach(t => {
+            if (t.op <= 0.001) return;
+            ctx.save();
+            ctx.globalAlpha *= t.op;
+            ctx.translate(t.x, tileTopY + tileH / 2 + t.yOff);
+            roundRectPath(ctx, -tileW / 2, -tileH / 2, tileW, tileH, 28);
+            ctx.fillStyle = t.tint;
+            ctx.fill();
+            drawToothIcon(ctx, 0, 4, 82, COL_TEAL);
+            ctx.restore();
+          });
+
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      // ---------------- SCENE 4 ----------------
+      if (state.s4Alpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.s4Alpha;
+
+        drawChip(ctx, "Step 3", state.s4ChipScale, state.s4ChipOpacity, "rgba(15, 181, 174, 0.14)", COL_TEAL);
+        drawHeadline(
+          ctx,
+          ["They pick the", "easiest to book"],
+          "easiest",
+          435,
+          state.s4HeadY,
+          state.s4HeadOpacity,
+          COL_BLUE,
+          COL_TEAL,
+          92
+        );
+
+        // Two stacked option cards (860x220, label text 48px) inside y=800..1450
+        if (state.s4CardsOpacity > 0.001) {
+          const cardW = 860, cardH = 220;
+          const cx = 510;
+          const cardAY = 965 + state.s4CardsY;
+          const cardBY = 1235 + state.s4CardsY;
+
+          // Card A: Grey, phone icon, "Call and wait"
+          ctx.save();
+          ctx.globalAlpha *= state.s4CardsOpacity * state.s4CardAOpacity;
+          ctx.translate(cx, cardAY);
+          roundRectPath(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 38);
+          ctx.fillStyle = "#E4EEF0";
+          ctx.fill();
+
+          drawPhoneHandsetIcon(ctx, -cardW / 2 + 110, 0, 64, "#5A768C");
+
+          ctx.font = "700 48px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillStyle = "#48657A";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText("Call and wait", -cardW / 2 + 190, 2);
+          ctx.restore();
+
+          // Card B: Teal outline -> fills teal at 14.4s, calendar icon, "Book online", white tick badge
+          ctx.save();
+          ctx.globalAlpha *= state.s4CardsOpacity;
+          ctx.translate(cx, cardBY);
+          ctx.scale(state.s4CardBScale, state.s4CardBScale);
+
+          ctx.save();
+          ctx.shadowColor = "rgba(15, 181, 174, 0.22)";
+          ctx.shadowBlur = 35;
+          ctx.shadowOffsetY = 14;
+          roundRectPath(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 38);
+          ctx.fillStyle = lerpColor("#FFFFFF", COL_TEAL, state.s4CardBFill);
+          ctx.fill();
+          ctx.restore();
+
+          roundRectPath(ctx, -cardW / 2, -cardH / 2, cardW, cardH, 38);
+          ctx.lineWidth = 6;
+          ctx.strokeStyle = COL_TEAL;
+          ctx.stroke();
+
+          const contentCol = lerpColor(COL_BLUE, "#FFFFFF", state.s4CardBFill);
+          const iconCol = lerpColor(COL_TEAL, "#FFFFFF", state.s4CardBFill);
+          drawCalendarIcon(ctx, -cardW / 2 + 110, 0, 64, iconCol);
+
+          ctx.font = "800 48px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillStyle = contentCol;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText("Book online", -cardW / 2 + 190, 2);
+
+          if (state.s4TickScale > 0.001) {
+            ctx.save();
+            ctx.translate(cardW / 2 - 105, 0);
+            ctx.scale(state.s4TickScale, state.s4TickScale);
+            drawTickIcon(ctx, 0, 0, 44, "#FFFFFF", COL_TEAL);
+            ctx.restore();
+          }
+
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      // ---------------- SCENE 5 ----------------
+      if (state.s5Alpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.s5Alpha;
+
+        // Headline (max 3 lines, white, no highlight) at y=400..760
+        drawHeadline(
+          ctx,
+          ["Be visible.", "Look trusted.", "Make booking easy."],
+          null,
+          410,
+          state.s5HeadY,
+          state.s5HeadOpacity,
+          COL_WHITE,
+          COL_WHITE,
+          88
+        );
+
+        const cx = 510;
+
+        // Tooth logo + BRAND wordmark ("ezsites", large, white)
+        if (state.s5BrandOpacity > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s5BrandOpacity;
+          ctx.translate(cx, 915);
+          ctx.scale(state.s5BrandScale, state.s5BrandScale);
+
+          drawToothIcon(ctx, -185, 4, 105, COL_WHITE);
+
+          ctx.font = "800 104px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillStyle = COL_WHITE;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(BRAND, -110, 4);
+          ctx.restore();
+        }
+
+        // Small line "Need the booking part?" (48px, white, 80% opacity)
+        if (state.s5SubOpacity > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s5SubOpacity;
+          ctx.font = "700 48px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillStyle = COL_WHITE;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("Need the booking part?", cx, 1095 + state.s5SubY);
+          ctx.restore();
+        }
+
+        // White pulsing button "Message us on WhatsApp" + pill showing CONTACT
+        if (state.s5BtnOpacity > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s5BtnOpacity;
+
+          const pulseScale = state.s5BtnScale * (1 + 0.035 * state.s5Pulse);
+          ctx.save();
+          ctx.translate(cx, 1235);
+          ctx.scale(pulseScale, pulseScale);
+
+          const bw = 760, bh = 124;
+          ctx.save();
+          ctx.shadowColor = "rgba(0, 0, 0, 0.25)";
+          ctx.shadowBlur = 30;
+          ctx.shadowOffsetY = 12;
+          roundRectPath(ctx, -bw / 2, -bh / 2, bw, bh, 62);
+          ctx.fillStyle = COL_WHITE;
+          ctx.fill();
+          ctx.restore();
+
+          ctx.font = "800 48px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillStyle = COL_BLUE;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("Message us on WhatsApp", 0, 2);
+          ctx.restore();
+
+          // Pill showing CONTACT (inside safe zone y <= 1470)
+          ctx.save();
+          ctx.translate(cx, 1385);
+          ctx.scale(state.s5BtnScale, state.s5BtnScale);
+          const pillW = 480, pillH = 78;
+          roundRectPath(ctx, -pillW / 2, -pillH / 2, pillW, pillH, 39);
+          ctx.fillStyle = "rgba(7, 18, 31, 0.38)";
+          ctx.fill();
+
+          ctx.font = "700 42px 'Plus Jakarta Sans', sans-serif";
+          ctx.fillStyle = COL_WHITE;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(CONTACT, 0, 2);
+          ctx.restore();
+
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    // ============================================================================
+    // INITIALIZATION, PREVIEW & MP4 EXPORT
+    // ============================================================================
+    const canvas = document.getElementById("reelCanvas");
+    const ctx = canvas.getContext("2d");
+    const previewBtn = document.getElementById("previewBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const statusText = document.getElementById("statusText");
+    const errorBox = document.getElementById("errorBox");
+    const resultArea = document.getElementById("resultArea");
+    const downloadAgainLink = document.getElementById("downloadAgainLink");
+    const resultVideo = document.getElementById("resultVideo");
+
+    let previewAudioCtx = null;
+    let previewRafId = null;
+    let isExporting = false;
+
+    function showError(msg) {
+      errorBox.style.display = "block";
+      errorBox.textContent = msg;
+    }
+
+    function clearError() {
+      errorBox.style.display = "none";
+      errorBox.textContent = "";
+    }
+
+    function stopPreview() {
+      if (previewRafId) {
+        cancelAnimationFrame(previewRafId);
+        previewRafId = null;
+      }
+      if (previewAudioCtx) {
+        try { previewAudioCtx.close(); } catch (e) {}
+        previewAudioCtx = null;
+      }
+      previewBtn.textContent = "▶ Preview";
+    }
+
+    async function startPreview() {
+      if (isExporting) return;
+      clearError();
+      stopPreview();
+
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      previewAudioCtx = new AudioCtx();
+      if (previewAudioCtx.state === "suspended") {
+        await previewAudioCtx.resume();
+      }
+
+      const startOffset = previewAudioCtx.currentTime + 0.05;
+      scheduleAllCues(previewAudioCtx, startOffset);
+
+      previewBtn.textContent = "⏹ Stop Preview";
+      statusText.textContent = "Playing preview...";
+
+      function tick() {
+        if (!previewAudioCtx) return;
+        const elapsed = Math.max(0, previewAudioCtx.currentTime - startOffset);
+        if (elapsed >= DURATION) {
+          tl.time(DURATION);
+          drawFrame(ctx);
+          stopPreview();
+          statusText.textContent = "Preview complete (22.0s).";
+          return;
+        }
+        tl.time(elapsed);
+        drawFrame(ctx);
+        statusText.textContent = `Previewing ${elapsed.toFixed(1)}s / ${DURATION}s`;
+        previewRafId = requestAnimationFrame(tick);
+      }
+
+      previewRafId = requestAnimationFrame(tick);
+    }
+
+    previewBtn.addEventListener("click", () => {
+      if (previewAudioCtx) {
+        stopPreview();
+        statusText.textContent = "Preview stopped.";
+      } else {
+        startPreview();
+      }
+    });
+
+    async function renderOfflineAudio() {
+      const sampleRate = 44100;
+      const totalSamples = sampleRate * DURATION;
+      const offlineCtx = new OfflineAudioContext(2, totalSamples, sampleRate);
+      scheduleAllCues(offlineCtx, 0);
+      return await offlineCtx.startRendering();
+    }
+
+    async function fallbackMediaRecorderExport() {
+      statusText.textContent = "WebCodecs unavailable — using real-time MediaRecorder fallback...";
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const recAudioCtx = new AudioCtx();
+      if (recAudioCtx.state === "suspended") await recAudioCtx.resume();
+
+      const dest = recAudioCtx.createMediaStreamDestination();
+      const startOffset = recAudioCtx.currentTime + 0.08;
+      scheduleAllCues(recAudioCtx, startOffset, dest);
+      // Also connect to speakers so user hears it during real-time capture
+      scheduleAllCues(recAudioCtx, startOffset, recAudioCtx.destination);
+
+      const canvasStream = canvas.captureStream(FPS);
+      const combined = new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...dest.stream.getAudioTracks()
+      ]);
+
+      const mimeTypes = [
+        "video/mp4;codecs=avc1,mp4a.40.2",
+        "video/mp4",
+        "video/webm;codecs=vp9,opus",
+        "video/webm"
+      ];
+      const chosenMime = mimeTypes.find(m => MediaRecorder.isTypeSupported(m)) || "";
+      const recorder = new MediaRecorder(combined, chosenMime ? { mimeType: chosenMime, videoBitsPerSecond: 8_000_000 } : undefined);
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+
+      const donePromise = new Promise((resolve, reject) => {
+        recorder.onstop = resolve;
+        recorder.onerror = e => reject(e.error || new Error("MediaRecorder failed"));
+      });
+
+      recorder.start();
+
+      await new Promise(resolve => {
+        function step() {
+          const elapsed = Math.max(0, recAudioCtx.currentTime - startOffset);
+          const pct = Math.min(100, Math.round((elapsed / DURATION) * 100));
+          statusText.textContent = `Fallback real-time recording: ${pct}%`;
+          if (elapsed >= DURATION) {
+            tl.time(DURATION);
+            drawFrame(ctx);
+            resolve();
+            return;
+          }
+          tl.time(elapsed);
+          drawFrame(ctx);
+          requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      });
+
+      recorder.stop();
+      await donePromise;
+      try { await recAudioCtx.close(); } catch (e) {}
+
+      const ext = chosenMime.includes("mp4") ? "mp4" : "webm";
+      const blob = new Blob(chunks, { type: chosenMime || "video/mp4" });
+      finishExportBlob(blob, `ezsites-how-patients-choose-reel.${ext}`, "Exported via MediaRecorder fallback.");
+    }
+
+    function finishExportBlob(blob, filename, note = "Export complete!") {
+      const url = URL.createObjectURL(blob);
+      downloadAgainLink.href = url;
+      downloadAgainLink.download = filename;
+      resultVideo.src = url;
+      resultArea.style.display = "flex";
+
+      const autoLink = document.createElement("a");
+      autoLink.href = url;
+      autoLink.download = filename;
+      document.body.appendChild(autoLink);
+      autoLink.click();
+      autoLink.remove();
+
+      statusText.textContent = note;
+    }
+
+    async function exportMP4() {
+      if (isExporting) return;
+      stopPreview();
+      clearError();
+      isExporting = true;
+      previewBtn.disabled = true;
+      exportBtn.disabled = true;
+      resultArea.style.display = "none";
+
+      let wakeLock = null;
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLock = await navigator.wakeLock.request("screen");
+        }
+      } catch (e) {}
+
+      try {
+        if (typeof VideoEncoder === "undefined") {
+          await fallbackMediaRecorderExport();
+          return;
+        }
+
+        // 1) Check VideoEncoder config support with fallbacks
+        const codecCandidates = ["avc1.64002A", "avc1.640028", "avc1.4D0028"];
+        let selectedVideoConfig = null;
+        for (const c of codecCandidates) {
+          const cfg = {
+            codec: c,
+            width: WIDTH,
+            height: HEIGHT,
+            bitrate: 8_000_000,
+            framerate: FPS
+          };
+          const res = await VideoEncoder.isConfigSupported(cfg);
+          if (res.supported) {
+            selectedVideoConfig = cfg;
+            break;
+          }
+        }
+
+        if (!selectedVideoConfig) {
+          await fallbackMediaRecorderExport();
+          return;
+        }
+
+        // 2) Check AudioEncoder support
+        let includeAudio = false;
+        const audioConfig = {
+          codec: "mp4a.40.2",
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitrate: 128000
+        };
+        if (typeof AudioEncoder !== "undefined") {
+          try {
+            const aRes = await AudioEncoder.isConfigSupported(audioConfig);
+            includeAudio = !!aRes.supported;
+          } catch (e) {
+            includeAudio = false;
+          }
+        }
+
+        statusText.textContent = "Rendering offline audio track...";
+        const audioBuffer = includeAudio ? await renderOfflineAudio() : null;
+
+        // 3) Setup Muxer
+        const muxerOptions = {
+          target: new ArrayBufferTarget(),
+          video: {
+            codec: "avc",
+            width: WIDTH,
+            height: HEIGHT
+          },
+          fastStart: "in-memory"
+        };
+        if (includeAudio) {
+          muxerOptions.audio = {
+            codec: "aac",
+            numberOfChannels: 2,
+            sampleRate: 44100
+          };
+        }
+        const muxer = new Muxer(muxerOptions);
+
+        let encoderError = null;
+
+        const videoEncoder = new VideoEncoder({
+          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+          error: err => { encoderError = err; }
+        });
+        videoEncoder.configure(selectedVideoConfig);
+
+        let audioEncoder = null;
+        if (includeAudio && audioBuffer) {
+          audioEncoder = new AudioEncoder({
+            output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+            error: err => { encoderError = err; }
+          });
+          audioEncoder.configure(audioConfig);
+
+          const ch0 = audioBuffer.getChannelData(0);
+          const ch1 = audioBuffer.getChannelData(1);
+          const chunkSize = 1024;
+          const totalFrames = audioBuffer.length;
+
+          for (let offset = 0; offset < totalFrames; offset += chunkSize) {
+            if (encoderError) throw encoderError;
+            const len = Math.min(chunkSize, totalFrames - offset);
+            const planarData = new Float32Array(len * 2);
+            planarData.set(ch0.subarray(offset, offset + len), 0);
+            planarData.set(ch1.subarray(offset, offset + len), len);
+
+            const timestampUs = Math.round((offset / 44100) * 1_000_000);
+            const audioData = new AudioData({
+              format: "f32-planar",
+              sampleRate: 44100,
+              numberOfFrames: len,
+              numberOfChannels: 2,
+              timestamp: timestampUs,
+              data: planarData
+            });
+            audioEncoder.encode(audioData);
+            audioData.close();
+          }
+          await audioEncoder.flush();
+        }
+
+        // 4) Encode all video frames (0 to DURATION*FPS - 1)
+        const totalVideoFrames = DURATION * FPS;
+        const frameDurationUs = Math.round(1_000_000 / FPS);
+
+        for (let i = 0; i < totalVideoFrames; i++) {
+          if (encoderError) throw encoderError;
+
+          const t = i / FPS;
+          tl.time(t);
+          drawFrame(ctx);
+
+          const timestampUs = Math.round((i * 1_000_000) / FPS);
+          const frame = new VideoFrame(canvas, {
+            timestamp: timestampUs,
+            duration: frameDurationUs
+          });
+
+          videoEncoder.encode(frame, { keyFrame: i % 30 === 0 });
+          frame.close();
+
+          // Respect encoder backpressure
+          while (videoEncoder.encodeQueueSize > 8) {
+            if (encoderError) throw encoderError;
+            await new Promise(r => setTimeout(r, 4));
+          }
+
+          if (i % 10 === 0 || i === totalVideoFrames - 1) {
+            const pct = Math.round(((i + 1) / totalVideoFrames) * 100);
+            statusText.textContent = `Exporting ${pct}%`;
+            await new Promise(r => setTimeout(r, 0));
+          }
+        }
+
+        await videoEncoder.flush();
+        if (encoderError) throw encoderError;
+
+        muxer.finalize();
+        const { buffer } = muxer.target;
+        const blob = new Blob([buffer], { type: "video/mp4" });
+
+        const finishNote = includeAudio
+          ? "Export complete! (MP4 with video + SFX audio track)"
+          : "Export complete! (Note: AudioEncoder was unsupported in this browser, so video was exported without audio)";
+        finishExportBlob(blob, "ezsites-how-patients-choose-reel.mp4", finishNote);
+      } catch (err) {
+        console.error(err);
+        showError(`Export failed: ${err && err.message ? err.message : String(err)}`);
+        statusText.textContent = "Export encountered an error.";
+      } finally {
+        if (wakeLock) {
+          try { await wakeLock.release(); } catch (e) {}
+        }
+        isExporting = false;
+        previewBtn.disabled = false;
+        exportBtn.disabled = false;
+      }
+    }
+
+    exportBtn.addEventListener("click", exportMP4);
+
+    // ============================================================================
+    // BOOTSTRAP: AWAIT FONTS BEFORE INITIAL DRAW
+    // ============================================================================
+    async function init() {
+      try {
+        await Promise.all([
+          document.fonts.load("500 48px 'Plus Jakarta Sans'"),
+          document.fonts.load("700 48px 'Plus Jakarta Sans'"),
+          document.fonts.load("800 92px 'Plus Jakarta Sans'")
+        ]);
+        await document.fonts.ready;
+
+        buildTimeline();
+        tl.time(1.9); // Show a clean representative hero frame initially
+        drawFrame(ctx);
+
+        previewBtn.disabled = false;
+        exportBtn.disabled = false;
+        statusText.textContent = "Ready — Click Preview or Export MP4.";
+      } catch (err) {
+        showError(`Initialization error: ${err.message}`);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
