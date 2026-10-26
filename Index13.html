@@ -1,0 +1,1521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ezsites - 5-Second Clinic Homepage Reel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #050B12;
+      color: #F6FBFB;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      gap: 14px;
+    }
+    .stage-wrap {
+      position: relative;
+      height: min(76vh, 780px);
+      aspect-ratio: 9 / 16;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      background: #07121F;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    button {
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 15px;
+      padding: 11px 22px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    #previewBtn {
+      background: #0FB5AE;
+      color: #07121F;
+    }
+    #exportBtn {
+      background: #F6FBFB;
+      color: #0B3C5D;
+    }
+    #statusText {
+      font-size: 14px;
+      color: #9CC2C9;
+      min-height: 20px;
+      text-align: center;
+    }
+    #errorBox {
+      display: none;
+      max-width: 520px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(255, 107, 94, 0.14);
+      border: 1px solid #FF6B5E;
+      color: #FFB4AD;
+      font-size: 13px;
+      text-align: center;
+    }
+    #resultArea {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    #downloadAgainLink {
+      color: #0FB5AE;
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: underline;
+    }
+    #resultVideo {
+      width: 180px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="stage-wrap">
+    <canvas id="reelCanvas" width="1080" height="1920"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="previewBtn">▶ Preview</button>
+    <button id="exportBtn">⬇ Export MP4</button>
+  </div>
+
+  <div id="statusText">Loading fonts & initializing timeline...</div>
+  <div id="errorBox"></div>
+
+  <div id="resultArea">
+    <a id="downloadAgainLink" href="#" download="ezsites-homepage-5-seconds-reel.mp4">Download again</a>
+    <video id="resultVideo" controls playsinline></video>
+  </div>
+
+  <script type="module">
+    import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm";
+
+    // =========================================================================
+    // CONSTANTS & FILL-INS
+    // =========================================================================
+    const BRAND = "ezsites";
+    const CONTACT = "+91 8102253186";
+    const CLINIC_DEMO = "Smile Care Dental Clinic";
+    const CITY_DEMO = "Patna";
+    const DURATION = 22;
+    const FPS = 30;
+    const WIDTH = 1080;
+    const HEIGHT = 1920;
+
+    const COLORS = {
+      navy: "#07121F",
+      softWhite: "#F6FBFB",
+      deepBlue: "#0B3C5D",
+      teal: "#0FB5AE",
+      coral: "#FF6B5E",
+      gold: "#F5B316",
+      grey: "#5A768C",
+      cardBorder: "#DCEBEB"
+    };
+
+    // =========================================================================
+    // SFX CUES & WEB AUDIO SYNTHESIZER (SHARED BY PREVIEW AND EXPORT)
+    // =========================================================================
+    const SFX_CUES = [
+      // SCENE 1 (0 - 4s)
+      { t: 0.2, type: "whoosh" },
+      { t: 0.5, type: "tick" },
+      { t: 0.9, type: "pop" },
+      { t: 1.3, type: "tick" },
+      { t: 1.8, type: "tick" },
+      { t: 2.3, type: "tick" },
+      { t: 2.8, type: "tick" },
+      { t: 3.3, type: "tick" },
+      { t: 3.6, type: "empty-ping" },
+
+      // SCENE 2 (4 - 7s)
+      { t: 4.0, type: "whoosh" },
+      { t: 4.3, type: "tick" },
+      { t: 4.6, type: "pop" },
+      { t: 5.2, type: "slide" },
+      { t: 6.0, type: "chime" },
+
+      // SCENE 3 (7 - 10s)
+      { t: 7.0, type: "whoosh" },
+      { t: 7.3, type: "tick" },
+      { t: 7.8, type: "slide" },
+      { t: 8.1, type: "slide" },
+      { t: 8.4, type: "slide" },
+      { t: 9.0, type: "chime" },
+
+      // SCENE 4 (10 - 13s)
+      { t: 10.0, type: "whoosh" },
+      { t: 10.3, type: "tick" },
+      { t: 10.8, type: "pop" },
+      { t: 11.6, type: "tick" },
+      { t: 12.0, type: "chime" },
+
+      // SCENE 5 (13 - 16s)
+      { t: 13.0, type: "whoosh" },
+      { t: 13.3, type: "tick" },
+      { t: 13.7, type: "pop" },
+      { t: 14.0, type: "pop" },
+      { t: 14.3, type: "pop" },
+      { t: 14.8, type: "tick" },
+      { t: 15.4, type: "chime" },
+
+      // SCENE 6 (16 - 22s)
+      { t: 16.0, type: "whoosh" },
+      { t: 16.8, type: "pop" },
+      { t: 18.4, type: "slide" },
+      { t: 19.6, type: "pop" },
+      { t: 20.2, type: "final-chime" }
+    ];
+
+    function createMasterChain(ctx, destination) {
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-12, 0);
+      compressor.knee.setValueAtTime(10, 0);
+      compressor.ratio.setValueAtTime(8, 0);
+      compressor.attack.setValueAtTime(0.003, 0);
+      compressor.release.setValueAtTime(0.15, 0);
+
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(0.25, 0);
+
+      masterGain.connect(compressor);
+      compressor.connect(destination || ctx.destination);
+      return masterGain;
+    }
+
+    function makeNoiseBuffer(ctx, seconds) {
+      const length = Math.max(1, Math.floor(ctx.sampleRate * seconds));
+      const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let seed = 1337;
+      for (let i = 0; i < length; i++) {
+        seed = (seed * 16807) % 2147483647;
+        data[i] = ((seed - 1) / 1073741823.5) - 1;
+      }
+      return buffer;
+    }
+
+    function scheduleCue(ctx, master, type, startTime) {
+      const t = Math.max(0, startTime);
+
+      if (type === "whoosh") {
+        const dur = 0.35;
+        const src = ctx.createBufferSource();
+        src.buffer = makeNoiseBuffer(ctx, dur);
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.Q.setValueAtTime(2.2, t);
+        filter.frequency.setValueAtTime(400, t);
+        filter.frequency.exponentialRampToValueAtTime(2500, t + dur);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.45, t + 0.08);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+        src.connect(filter);
+        filter.connect(g);
+        g.connect(master);
+        src.start(t);
+        src.stop(t + dur);
+      } else if (type === "slide") {
+        const dur = 0.2;
+        const src = ctx.createBufferSource();
+        src.buffer = makeNoiseBuffer(ctx, dur);
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.Q.setValueAtTime(3.0, t);
+        filter.frequency.setValueAtTime(650, t);
+        filter.frequency.exponentialRampToValueAtTime(1800, t + dur);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.24, t + 0.04);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+        src.connect(filter);
+        filter.connect(g);
+        g.connect(master);
+        src.start(t);
+        src.stop(t + dur);
+      } else if (type === "pop") {
+        const dur = 0.12;
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(700, t);
+        osc.frequency.exponentialRampToValueAtTime(250, t + dur);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.65, t + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+        osc.connect(g);
+        g.connect(master);
+        osc.start(t);
+        osc.stop(t + dur);
+      } else if (type === "tick") {
+        const dur = 0.05;
+        const osc = ctx.createOscillator();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(1200, t);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.5, t + 0.006);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+
+        osc.connect(g);
+        g.connect(master);
+        osc.start(t);
+        osc.stop(t + dur);
+      } else if (type === "chime") {
+        const notes = [
+          { freq: 880, offset: 0, dur: 0.35 },
+          { freq: 1320, offset: 0.08, dur: 0.4 }
+        ];
+        for (const n of notes) {
+          const nt = t + n.offset;
+          const osc = ctx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(n.freq, nt);
+
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, nt);
+          g.gain.linearRampToValueAtTime(0.45, nt + 0.015);
+          g.gain.exponentialRampToValueAtTime(0.0001, nt + n.dur);
+
+          osc.connect(g);
+          g.connect(master);
+          osc.start(nt);
+          osc.stop(nt + n.dur);
+        }
+      } else if (type === "empty-ping") {
+        const notes = [
+          { freq: 520, offset: 0, dur: 0.18 },
+          { freq: 390, offset: 0.14, dur: 0.21 }
+        ];
+        for (const n of notes) {
+          const nt = t + n.offset;
+          const osc = ctx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(n.freq, nt);
+
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, nt);
+          g.gain.linearRampToValueAtTime(0.5, nt + 0.012);
+          g.gain.exponentialRampToValueAtTime(0.0001, nt + n.dur);
+
+          osc.connect(g);
+          g.connect(master);
+          osc.start(nt);
+          osc.stop(nt + n.dur);
+        }
+      } else if (type === "final-chime") {
+        const notes = [
+          { freq: 660, offset: 0, dur: 0.55 },
+          { freq: 880, offset: 0.1, dur: 0.65 },
+          { freq: 1320, offset: 0.2, dur: 0.8 }
+        ];
+        for (const n of notes) {
+          const nt = t + n.offset;
+          const osc = ctx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(n.freq, nt);
+
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, nt);
+          g.gain.linearRampToValueAtTime(0.42, nt + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, nt + n.dur);
+
+          osc.connect(g);
+          g.connect(master);
+          osc.start(nt);
+          osc.stop(nt + n.dur);
+        }
+      }
+    }
+
+    function scheduleAllSfx(ctx, baseTime = 0, destination = null) {
+      const master = createMasterChain(ctx, destination);
+      for (const cue of SFX_CUES) {
+        scheduleCue(ctx, master, cue.type, baseTime + cue.t);
+      }
+    }
+
+    async function renderOfflineAudio() {
+      const sampleRate = 44100;
+      const totalFrames = sampleRate * DURATION;
+      const offlineCtx = new OfflineAudioContext(2, totalFrames, sampleRate);
+      scheduleAllSfx(offlineCtx, 0, offlineCtx.destination);
+      return await offlineCtx.startRendering();
+    }
+
+    // =========================================================================
+    // STATE OBJECT & GSAP MASTER TIMELINE
+    // =========================================================================
+    const state = {};
+
+    function resetState() {
+      Object.assign(state, {
+        bgLightMix: 0,
+        bgGradMix: 0,
+
+        // Scene 1
+        s1ChipAlpha: 0, s1ChipY: 20,
+        s1HeadAlpha: 0, s1HeadY: 40,
+        s1TimerAlpha: 0, s1TimerScale: 0.82,
+        s1Progress: 1,
+        s1Count: 5,
+        s1CoralMix: 0,
+
+        // Scene 2-5 Shared Website Card
+        cardAlpha: 0, cardScale: 0.92, cardY: 40,
+        b1Alpha: 0, b1Y: 20,
+        pill1Alpha: 0, pill1Y: 22,
+        pill2Alpha: 0, pill2Y: 22,
+        pill3Alpha: 0, pill3Y: 22,
+        btnAlpha: 0, btnScale: 0.85,
+        photo1Alpha: 0, photo1Scale: 0.75,
+        photo2Alpha: 0, photo2Scale: 0.75,
+        photo3Alpha: 0, photo3Scale: 0.75,
+        ratingAlpha: 0, ratingY: 16,
+
+        // Scene 2 Header & Tick
+        s2ChipAlpha: 0, s2ChipY: 20,
+        s2HeadAlpha: 0, s2HeadY: 40,
+        s2TickAlpha: 0, s2TickScale: 0.5,
+
+        // Scene 3 Header & Tick
+        s3ChipAlpha: 0, s3ChipY: 20,
+        s3HeadAlpha: 0, s3HeadY: 40,
+        s3TickAlpha: 0, s3TickScale: 0.5,
+
+        // Scene 4 Header & Tick
+        s4ChipAlpha: 0, s4ChipY: 20,
+        s4HeadAlpha: 0, s4HeadY: 40,
+        s4TickAlpha: 0, s4TickScale: 0.5,
+
+        // Scene 5 Header & Tick
+        s5ChipAlpha: 0, s5ChipY: 20,
+        s5HeadAlpha: 0, s5HeadY: 40,
+        s5TickAlpha: 0, s5TickScale: 0.5,
+
+        // Scene 6 Final CTA
+        s6HeadAlpha: 0, s6HeadY: 40,
+        s6LogoAlpha: 0, s6LogoScale: 0.85,
+        s6SubAlpha: 0, s6SubY: 25,
+        s6BtnAlpha: 0, s6BtnScale: 0.85,
+        s6PhoneAlpha: 0, s6PhoneY: 20
+      });
+    }
+
+    resetState();
+    const tl = gsap.timeline({ paused: true });
+
+    function buildTimeline() {
+      tl.clear();
+      resetState();
+
+      // --- SCENE 1 (0 - 4s) ---
+      tl.to(state, { s1HeadAlpha: 1, s1HeadY: 0, duration: 0.45, ease: "power3.out" }, 0.2);
+      tl.to(state, { s1ChipAlpha: 1, s1ChipY: 0, duration: 0.35, ease: "power3.out" }, 0.5);
+      tl.to(state, { s1TimerAlpha: 1, s1TimerScale: 1, duration: 0.4, ease: "back.out(1.5)" }, 0.9);
+      tl.to(state, { s1Progress: 0, duration: 2.9, ease: "none" }, 0.9);
+
+      tl.set(state, { s1Count: 5 }, 0.0);
+      tl.set(state, { s1Count: 4 }, 1.8);
+      tl.set(state, { s1Count: 3 }, 2.3);
+      tl.set(state, { s1Count: 2 }, 2.8);
+      tl.set(state, { s1Count: 1 }, 3.3);
+      tl.to(state, { s1CoralMix: 1, duration: 0.15, ease: "power2.out" }, 3.6);
+
+      tl.to(state, {
+        s1ChipAlpha: 0, s1HeadAlpha: 0, s1HeadY: -25,
+        s1TimerAlpha: 0, s1TimerScale: 0.9,
+        duration: 0.28, ease: "power2.in"
+      }, 3.7);
+
+      // --- SCENE 2 (4 - 7s) ---
+      tl.to(state, { bgLightMix: 1, duration: 0.4, ease: "power2.inOut" }, 3.85);
+      tl.to(state, { s2HeadAlpha: 1, s2HeadY: 0, duration: 0.45, ease: "power3.out" }, 4.0);
+      tl.to(state, { s2ChipAlpha: 1, s2ChipY: 0, duration: 0.35, ease: "power3.out" }, 4.3);
+      tl.to(state, { cardAlpha: 1, cardScale: 1, cardY: 0, duration: 0.45, ease: "back.out(1.3)" }, 4.6);
+      tl.to(state, { b1Alpha: 1, b1Y: 0, duration: 0.4, ease: "power3.out" }, 5.2);
+      tl.to(state, { s2TickAlpha: 1, s2TickScale: 1, duration: 0.3, ease: "back.out(2)" }, 6.0);
+
+      tl.to(state, {
+        s2ChipAlpha: 0, s2HeadAlpha: 0, s2HeadY: -25, s2TickAlpha: 0,
+        duration: 0.28, ease: "power2.in"
+      }, 6.7);
+
+      // --- SCENE 3 (7 - 10s) ---
+      tl.to(state, { s3HeadAlpha: 1, s3HeadY: 0, duration: 0.45, ease: "power3.out" }, 7.0);
+      tl.to(state, { s3ChipAlpha: 1, s3ChipY: 0, duration: 0.35, ease: "power3.out" }, 7.3);
+      tl.to(state, { pill1Alpha: 1, pill1Y: 0, duration: 0.32, ease: "power3.out" }, 7.8);
+      tl.to(state, { pill2Alpha: 1, pill2Y: 0, duration: 0.32, ease: "power3.out" }, 8.1);
+      tl.to(state, { pill3Alpha: 1, pill3Y: 0, duration: 0.32, ease: "power3.out" }, 8.4);
+      tl.to(state, { s3TickAlpha: 1, s3TickScale: 1, duration: 0.3, ease: "back.out(2)" }, 9.0);
+
+      tl.to(state, {
+        s3ChipAlpha: 0, s3HeadAlpha: 0, s3HeadY: -25, s3TickAlpha: 0,
+        duration: 0.28, ease: "power2.in"
+      }, 9.7);
+
+      // --- SCENE 4 (10 - 13s) ---
+      tl.to(state, { s4HeadAlpha: 1, s4HeadY: 0, duration: 0.45, ease: "power3.out" }, 10.0);
+      tl.to(state, { s4ChipAlpha: 1, s4ChipY: 0, duration: 0.35, ease: "power3.out" }, 10.3);
+      tl.to(state, { btnAlpha: 1, btnScale: 1, duration: 0.4, ease: "back.out(1.6)" }, 10.8);
+      tl.to(state, { btnScale: 1.045, duration: 0.14, ease: "power2.out" }, 11.6);
+      tl.to(state, { btnScale: 1.0, duration: 0.2, ease: "power2.inOut" }, 11.74);
+      tl.to(state, { s4TickAlpha: 1, s4TickScale: 1, duration: 0.3, ease: "back.out(2)" }, 12.0);
+
+      tl.to(state, {
+        s4ChipAlpha: 0, s4HeadAlpha: 0, s4HeadY: -25, s4TickAlpha: 0,
+        duration: 0.28, ease: "power2.in"
+      }, 12.7);
+
+      // --- SCENE 5 (13 - 16s) ---
+      tl.to(state, { s5HeadAlpha: 1, s5HeadY: 0, duration: 0.45, ease: "power3.out" }, 13.0);
+      tl.to(state, { s5ChipAlpha: 1, s5ChipY: 0, duration: 0.35, ease: "power3.out" }, 13.3);
+      tl.to(state, { photo1Alpha: 1, photo1Scale: 1, duration: 0.3, ease: "back.out(1.6)" }, 13.7);
+      tl.to(state, { photo2Alpha: 1, photo2Scale: 1, duration: 0.3, ease: "back.out(1.6)" }, 14.0);
+      tl.to(state, { photo3Alpha: 1, photo3Scale: 1, duration: 0.3, ease: "back.out(1.6)" }, 14.3);
+      tl.to(state, { ratingAlpha: 1, ratingY: 0, duration: 0.35, ease: "power3.out" }, 14.8);
+      tl.to(state, { s5TickAlpha: 1, s5TickScale: 1, duration: 0.3, ease: "back.out(2)" }, 15.4);
+
+      tl.to(state, {
+        s5ChipAlpha: 0, s5HeadAlpha: 0, s5HeadY: -25, s5TickAlpha: 0,
+        cardAlpha: 0, cardScale: 0.94, cardY: 30,
+        duration: 0.3, ease: "power2.in"
+      }, 15.7);
+
+      // --- SCENE 6 (16 - 22s) ---
+      tl.to(state, { bgGradMix: 1, duration: 0.45, ease: "power2.inOut" }, 15.85);
+      tl.to(state, { s6HeadAlpha: 1, s6HeadY: 0, duration: 0.5, ease: "power3.out" }, 16.0);
+      tl.to(state, { s6LogoAlpha: 1, s6LogoScale: 1, duration: 0.45, ease: "back.out(1.5)" }, 16.8);
+      tl.to(state, { s6SubAlpha: 1, s6SubY: 0, duration: 0.45, ease: "power3.out" }, 18.4);
+      tl.to(state, { s6BtnAlpha: 1, s6BtnScale: 1, duration: 0.42, ease: "back.out(1.6)" }, 19.6);
+      tl.to(state, { s6PhoneAlpha: 1, s6PhoneY: 0, duration: 0.4, ease: "power3.out" }, 19.8);
+      tl.to(state, { s6BtnScale: 1.04, duration: 0.22, ease: "power2.out" }, 20.2);
+      tl.to(state, { s6BtnScale: 1.0, duration: 0.3, ease: "power2.inOut" }, 20.42);
+      tl.to(state, { s6BtnScale: 1.03, duration: 0.25, ease: "power2.out" }, 21.1);
+      tl.to(state, { s6BtnScale: 1.0, duration: 0.3, ease: "power2.inOut" }, 21.35);
+
+      tl.set({}, {}, DURATION);
+    }
+
+    // =========================================================================
+    // CANVAS 2D DRAWING HELPERS
+    // =========================================================================
+    function lerpColor(hexA, hexB, t) {
+      const a = parseInt(hexA.slice(1), 16);
+      const b = parseInt(hexB.slice(1), 16);
+      const ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255;
+      const br = (b >> 16) & 255, bg = (b >> 8) & 255, bb = b & 255;
+      const r = Math.round(ar + (br - ar) * t);
+      const g = Math.round(ag + (bg - ag) * t);
+      const bl = Math.round(ab + (bb - ab) * t);
+      return `rgb(${r}, ${g}, ${bl})`;
+    }
+
+    function roundRectPath(ctx, x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    }
+
+    function drawChip(ctx, text, cx, y, alpha, offsetY, isDarkBg) {
+      if (alpha <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(0, offsetY);
+
+      ctx.font = "700 40px 'Plus Jakarta Sans'";
+      const textW = ctx.measureText(text).width;
+      const padX = 34;
+      const h = 68;
+      const w = textW + padX * 2;
+      const x = cx - w / 2;
+
+      roundRectPath(ctx, x, y, w, h, h / 2);
+      ctx.fillStyle = isDarkBg ? "rgba(15, 181, 174, 0.16)" : "rgba(15, 181, 174, 0.14)";
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = COLORS.teal;
+      ctx.stroke();
+
+      ctx.fillStyle = isDarkBg ? COLORS.softWhite : COLORS.deepBlue;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, cx, y + h / 2 + 2);
+      ctx.restore();
+    }
+
+    function drawHeadline(ctx, lines, highlights, cx, startY, alpha, offsetY, baseColor, highlightColor) {
+      if (alpha <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(0, offsetY);
+
+      const fontSize = 92;
+      const lineHeight = Math.round(fontSize * 1.15);
+      ctx.font = `800 ${fontSize}px 'Plus Jakarta Sans'`;
+      ctx.textBaseline = "top";
+      ctx.textAlign = "left";
+
+      lines.forEach((lineText, idx) => {
+        const y = startY + idx * lineHeight;
+        const lowerLine = lineText.toLowerCase();
+        const charHighlight = new Array(lineText.length).fill(false);
+
+        for (const phrase of highlights) {
+          const lp = phrase.toLowerCase();
+          let pos = lowerLine.indexOf(lp);
+          while (pos !== -1) {
+            for (let k = pos; k < pos + lp.length; k++) charHighlight[k] = true;
+            pos = lowerLine.indexOf(lp, pos + lp.length);
+          }
+        }
+
+        const runs = [];
+        let i = 0;
+        while (i < lineText.length) {
+          const isHi = charHighlight[i];
+          let j = i + 1;
+          while (j < lineText.length && charHighlight[j] === isHi) j++;
+          runs.push({ text: lineText.slice(i, j), highlight: isHi });
+          i = j;
+        }
+
+        const totalWidth = ctx.measureText(lineText).width;
+        let curX = cx - totalWidth / 2;
+
+        for (const run of runs) {
+          ctx.fillStyle = run.highlight ? highlightColor : baseColor;
+          ctx.fillText(run.text, curX, y);
+          curX += ctx.measureText(run.text).width;
+        }
+      });
+
+      ctx.restore();
+    }
+
+    function drawToothIcon(ctx, cx, cy, size, color) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      const s = size / 100;
+      ctx.scale(s, s);
+      ctx.beginPath();
+      ctx.moveTo(0, -34);
+      ctx.bezierCurveTo(14, -46, 40, -44, 42, -16);
+      ctx.bezierCurveTo(44, 6, 32, 18, 28, 38);
+      ctx.bezierCurveTo(25, 48, 15, 48, 11, 32);
+      ctx.bezierCurveTo(7, 18, -7, 18, -11, 32);
+      ctx.bezierCurveTo(-15, 48, -25, 48, -28, 38);
+      ctx.bezierCurveTo(-32, 18, -44, 6, -42, -16);
+      ctx.bezierCurveTo(-40, -44, -14, -46, 0, -34);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawStar(ctx, cx, cy, outerR, innerR, color) {
+      ctx.save();
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const r = i % 2 === 0 ? outerR : innerR;
+        const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawTickBadge(ctx, cx, cy, radius, alpha, scale) {
+      if (alpha <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.translate(cx, cy);
+      ctx.scale(scale, scale);
+
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fillStyle = COLORS.teal;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-radius * 0.42, radius * 0.02);
+      ctx.lineTo(-radius * 0.1, radius * 0.34);
+      ctx.lineTo(radius * 0.45, -radius * 0.28);
+      ctx.lineWidth = Math.max(5, radius * 0.22);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#FFFFFF";
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // MASTER FRAME RENDERER: drawFrame(ctx)
+    // Safe Zone: x in [80..940], y in [300..1470], centerX = 540 (Exact Horizontal Center)
+    // =========================================================================
+    const SAFE_CX = 540;
+
+    function drawFrame(ctx) {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      // 1. Background
+      const baseColor = lerpColor(COLORS.navy, COLORS.softWhite, state.bgLightMix);
+      ctx.fillStyle = baseColor;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      if (state.bgGradMix > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.bgGradMix;
+        const grad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+        grad.addColorStop(0, COLORS.teal);
+        grad.addColorStop(1, COLORS.deepBlue);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        ctx.restore();
+      }
+
+      // 2. SCENE 1: 5-second test
+      drawChip(ctx, "5-second test", SAFE_CX, 315, state.s1ChipAlpha, state.s1ChipY, true);
+      drawHeadline(
+        ctx,
+        ["Patients decide", "in 5 seconds"],
+        ["5 seconds"],
+        SAFE_CX,
+        450,
+        state.s1HeadAlpha,
+        state.s1HeadY,
+        COLORS.softWhite,
+        COLORS.coral
+      );
+
+      if (state.s1TimerAlpha > 0.001) {
+        const timerCX = SAFE_CX;
+        const timerCY = 1110;
+        const radius = 210;
+        const ringColor = lerpColor(COLORS.teal, COLORS.coral, state.s1CoralMix);
+
+        ctx.save();
+        ctx.globalAlpha = state.s1TimerAlpha;
+        ctx.translate(timerCX, timerCY);
+        ctx.scale(state.s1TimerScale, state.s1TimerScale);
+
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.lineWidth = 26;
+        ctx.strokeStyle = "rgba(246, 251, 251, 0.12)";
+        ctx.stroke();
+
+        if (state.s1Progress > 0.002) {
+          const startAngle = -Math.PI / 2 + (1 - state.s1Progress) * Math.PI * 2;
+          const endAngle = -Math.PI / 2 + Math.PI * 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, radius, startAngle, endAngle, false);
+          ctx.lineWidth = 26;
+          ctx.lineCap = "round";
+          ctx.strokeStyle = ringColor;
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(0, 0, radius, 0, Math.PI * 2);
+          ctx.lineWidth = 26;
+          ctx.strokeStyle = ringColor;
+          ctx.stroke();
+        }
+
+        ctx.font = "800 185px 'Plus Jakarta Sans'";
+        ctx.fillStyle = state.s1CoralMix > 0.5 ? COLORS.coral : COLORS.softWhite;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(state.s1Count), 0, 10);
+
+        ctx.restore();
+      }
+
+      // 3. SCENES 2 to 5 HEADERS & CHIPS
+      drawChip(ctx, "1 of 4", SAFE_CX, 315, state.s2ChipAlpha, state.s2ChipY, false);
+      drawHeadline(
+        ctx,
+        ["Show your clinic", "name and city"],
+        ["name and city"],
+        SAFE_CX,
+        435,
+        state.s2HeadAlpha,
+        state.s2HeadY,
+        COLORS.deepBlue,
+        COLORS.teal
+      );
+
+      drawChip(ctx, "2 of 4", SAFE_CX, 315, state.s3ChipAlpha, state.s3ChipY, false);
+      drawHeadline(
+        ctx,
+        ["Show your", "top treatments"],
+        ["top treatments"],
+        SAFE_CX,
+        435,
+        state.s3HeadAlpha,
+        state.s3HeadY,
+        COLORS.deepBlue,
+        COLORS.teal
+      );
+
+      drawChip(ctx, "3 of 4", SAFE_CX, 315, state.s4ChipAlpha, state.s4ChipY, false);
+      drawHeadline(
+        ctx,
+        ["Add a clear", "booking button"],
+        ["booking button"],
+        SAFE_CX,
+        435,
+        state.s4HeadAlpha,
+        state.s4HeadY,
+        COLORS.deepBlue,
+        COLORS.teal
+      );
+
+      drawChip(ctx, "4 of 4", SAFE_CX, 315, state.s5ChipAlpha, state.s5ChipY, false);
+      drawHeadline(
+        ctx,
+        ["Add real photos", "and reviews"],
+        ["photos", "reviews"],
+        SAFE_CX,
+        435,
+        state.s5HeadAlpha,
+        state.s5HeadY,
+        COLORS.deepBlue,
+        COLORS.teal
+      );
+
+      // 4. SHARED WEBSITE CARD (Scenes 2 to 5, perfectly centered horizontally at SAFE_CX)
+      if (state.cardAlpha > 0.001) {
+        const cardW = 860;
+        const cardH = 640;
+        const cardX = SAFE_CX - cardW / 2; // 110
+        const cardY = 805;
+
+        ctx.save();
+        ctx.globalAlpha = state.cardAlpha;
+        ctx.translate(SAFE_CX, cardY + cardH / 2 + state.cardY);
+        ctx.scale(state.cardScale, state.cardScale);
+        ctx.translate(-SAFE_CX, -(cardY + cardH / 2));
+
+        // Card drop shadow & body
+        ctx.save();
+        ctx.shadowColor = "rgba(11, 60, 93, 0.12)";
+        ctx.shadowBlur = 40;
+        ctx.shadowOffsetY = 18;
+        roundRectPath(ctx, cardX, cardY, cardW, cardH, 28);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fill();
+        ctx.restore();
+
+        roundRectPath(ctx, cardX, cardY, cardW, cardH, 28);
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = COLORS.cardBorder;
+        ctx.stroke();
+
+        // Top browser bar
+        ctx.save();
+        roundRectPath(ctx, cardX, cardY, cardW, cardH, 28);
+        ctx.clip();
+        ctx.fillStyle = "#EEF7F7";
+        ctx.fillRect(cardX, cardY, cardW, 56);
+        ctx.strokeStyle = COLORS.cardBorder;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cardX, cardY + 56);
+        ctx.lineTo(cardX + cardW, cardY + 56);
+        ctx.stroke();
+
+        // Three minimalist browser dots
+        const dotColors = ["#FF6B5E", "#F5B316", "#0FB5AE"];
+        for (let d = 0; d < 3; d++) {
+          ctx.beginPath();
+          ctx.arc(cardX + 36 + d * 26, cardY + 28, 7.5, 0, Math.PI * 2);
+          ctx.fillStyle = dotColors[d];
+          ctx.fill();
+        }
+
+        // BLOCK 1 (Scene 2): Centered clinic info block inside card
+        if (state.b1Alpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.b1Alpha;
+          ctx.translate(0, state.b1Y);
+
+          const blockY = cardY + 130;
+          drawToothIcon(ctx, SAFE_CX, blockY + 36, 56, COLORS.teal);
+
+          ctx.textAlign = "center";
+          ctx.textBaseline = "top";
+          ctx.font = "800 44px 'Plus Jakarta Sans'";
+          ctx.fillStyle = COLORS.deepBlue;
+          ctx.fillText(CLINIC_DEMO, SAFE_CX, blockY + 84);
+
+          ctx.font = "700 36px 'Plus Jakarta Sans'";
+          ctx.fillStyle = COLORS.grey;
+          ctx.fillText(CITY_DEMO, SAFE_CX, blockY + 138);
+          ctx.restore();
+        }
+
+        // BLOCK 2 (Scene 3): Three treatment pills perfectly centered as a group
+        const pills = [
+          { label: "Braces", alpha: state.pill1Alpha, y: state.pill1Y, w: 220 },
+          { label: "Implants", alpha: state.pill2Alpha, y: state.pill2Y, w: 240 },
+          { label: "Whitening", alpha: state.pill3Alpha, y: state.pill3Y, w: 240 }
+        ];
+        const pillGap = 20;
+        const totalPillsW = pills.reduce((acc, p) => acc + p.w, 0) + pillGap * 2;
+        let currentPillX = SAFE_CX - totalPillsW / 2;
+        const pillBaseY = cardY + 245;
+        const pillH = 72;
+
+        for (const p of pills) {
+          const px = currentPillX;
+          currentPillX += p.w + pillGap;
+
+          if (p.alpha > 0.001) {
+            ctx.save();
+            ctx.globalAlpha *= p.alpha;
+            ctx.translate(0, p.y);
+
+            roundRectPath(ctx, px, pillBaseY, p.w, pillH, pillH / 2);
+            ctx.fillStyle = "rgba(15, 181, 174, 0.07)";
+            ctx.fill();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = COLORS.teal;
+            ctx.stroke();
+
+            ctx.font = "700 36px 'Plus Jakarta Sans'";
+            ctx.fillStyle = COLORS.deepBlue;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(p.label, px + p.w / 2, pillBaseY + pillH / 2 + 2);
+            ctx.restore();
+          }
+        }
+
+        // BLOCK 3 (Scene 4): Wide centered teal button "Book appointment"
+        if (state.btnAlpha > 0.001) {
+          const btnW = cardW - 88;
+          const btnH = 92;
+          const btnX = SAFE_CX - btnW / 2;
+          const btnY = cardY + 315;
+          const btnCY = btnY + btnH / 2;
+
+          ctx.save();
+          ctx.globalAlpha *= state.btnAlpha;
+          ctx.translate(SAFE_CX, btnCY);
+          ctx.scale(state.btnScale, state.btnScale);
+          ctx.translate(-SAFE_CX, -btnCY);
+
+          roundRectPath(ctx, btnX, btnY, btnW, btnH, 24);
+          ctx.fillStyle = COLORS.teal;
+          ctx.fill();
+
+          ctx.font = "800 40px 'Plus Jakarta Sans'";
+          ctx.fillStyle = "#FFFFFF";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("Book appointment", SAFE_CX, btnCY + 2);
+          ctx.restore();
+        }
+
+        // BLOCK 4 (Scene 5): Three photo tiles + 5 gold stars centered
+        const tileY = cardY + 235;
+        const tileW = 236;
+        const tileH = 160;
+        const tileGap = 20;
+        const totalTilesW = tileW * 3 + tileGap * 2;
+        let currentTileX = SAFE_CX - totalTilesW / 2;
+
+        const tiles = [
+          { alpha: state.photo1Alpha, scale: state.photo1Scale, tint: "#D5F3F1" },
+          { alpha: state.photo2Alpha, scale: state.photo2Scale, tint: "#C2ECE9" },
+          { alpha: state.photo3Alpha, scale: state.photo3Scale, tint: "#B0E5E1" }
+        ];
+
+        for (const tile of tiles) {
+          const tx = currentTileX;
+          currentTileX += tileW + tileGap;
+
+          if (tile.alpha > 0.001) {
+            const tcx = tx + tileW / 2;
+            const tcy = tileY + tileH / 2;
+            ctx.save();
+            ctx.globalAlpha *= tile.alpha;
+            ctx.translate(tcx, tcy);
+            ctx.scale(tile.scale, tile.scale);
+            ctx.translate(-tcx, -tcy);
+
+            roundRectPath(ctx, tx, tileY, tileW, tileH, 20);
+            ctx.fillStyle = tile.tint;
+            ctx.fill();
+
+            drawToothIcon(ctx, tcx, tcy, 52, COLORS.teal);
+            ctx.restore();
+          }
+        }
+
+        if (state.ratingAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.ratingAlpha;
+          ctx.translate(0, state.ratingY);
+
+          const ratingY = cardY + 490;
+          const starSpacing = 48;
+          const totalStarsW = starSpacing * 4;
+          // Measure width of "4.8" text
+          ctx.font = "800 36px 'Plus Jakarta Sans'";
+          const textW = ctx.measureText("4.8").width;
+          const groupW = totalStarsW + 16 + textW;
+          const startStarX = SAFE_CX - groupW / 2 + 20;
+
+          for (let s = 0; s < 5; s++) {
+            drawStar(ctx, startStarX + s * starSpacing, ratingY, 20, 9.5, COLORS.gold);
+          }
+
+          ctx.fillStyle = COLORS.deepBlue;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText("4.8", startStarX + 5 * starSpacing + 12, ratingY + 2);
+          ctx.restore();
+        }
+
+        ctx.restore(); // End card clip
+
+        const tickX = cardX + cardW - 42;
+        const tickY = cardY + 28;
+        drawTickBadge(ctx, tickX, tickY, 22, state.s2TickAlpha, state.s2TickScale);
+        drawTickBadge(ctx, tickX, tickY, 22, state.s3TickAlpha, state.s3TickScale);
+        drawTickBadge(ctx, tickX, tickY, 22, state.s4TickAlpha, state.s4TickScale);
+        drawTickBadge(ctx, tickX, tickY, 22, state.s5TickAlpha, state.s5TickScale);
+
+        ctx.restore(); // End card transform
+      }
+
+      // 6. SCENE 6: Final Brand CTA
+      drawHeadline(
+        ctx,
+        ["Clear page,", "more bookings"],
+        [],
+        SAFE_CX,
+        440,
+        state.s6HeadAlpha,
+        state.s6HeadY,
+        "#FFFFFF",
+        "#FFFFFF"
+      );
+
+      if (state.s6LogoAlpha > 0.001) {
+        const logoY = 850;
+        ctx.save();
+        ctx.globalAlpha = state.s6LogoAlpha;
+        ctx.translate(SAFE_CX, logoY);
+        ctx.scale(state.s6LogoScale, state.s6LogoScale);
+
+        ctx.font = "800 108px 'Plus Jakarta Sans'";
+        const brandW = ctx.measureText(BRAND).width;
+        const iconSize = 96;
+        const gap = 28;
+        const totalW = iconSize + gap + brandW;
+        const startX = -totalW / 2;
+
+        roundRectPath(ctx, startX, -iconSize / 2, iconSize, iconSize, 24);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+        ctx.fill();
+        drawToothIcon(ctx, startX + iconSize / 2, 0, 58, "#FFFFFF");
+
+        ctx.fillStyle = "#FFFFFF";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(BRAND, startX + iconSize + gap, 4);
+        ctx.restore();
+      }
+
+      if (state.s6SubAlpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.s6SubAlpha * 0.8;
+        ctx.translate(0, state.s6SubY);
+        ctx.font = "700 48px 'Plus Jakarta Sans'";
+        ctx.fillStyle = "#FFFFFF";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("We build this for clinics", SAFE_CX, 1020);
+        ctx.restore();
+      }
+
+      if (state.s6BtnAlpha > 0.001) {
+        const btnW = 740;
+        const btnH = 116;
+        const btnX = SAFE_CX - btnW / 2;
+        const btnY = 1130;
+        const btnCY = btnY + btnH / 2;
+
+        ctx.save();
+        ctx.globalAlpha = state.s6BtnAlpha;
+        ctx.translate(SAFE_CX, btnCY);
+        ctx.scale(state.s6BtnScale, state.s6BtnScale);
+        ctx.translate(-SAFE_CX, -btnCY);
+
+        ctx.save();
+        ctx.shadowColor = "rgba(7, 18, 31, 0.28)";
+        ctx.shadowBlur = 32;
+        ctx.shadowOffsetY = 14;
+        roundRectPath(ctx, btnX, btnY, btnW, btnH, 999);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fill();
+        ctx.restore();
+
+        ctx.font = "800 46px 'Plus Jakarta Sans'";
+        ctx.fillStyle = COLORS.deepBlue;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("Message us on WhatsApp", SAFE_CX, btnCY + 2);
+        ctx.restore();
+      }
+
+      if (state.s6PhoneAlpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.s6PhoneAlpha;
+        ctx.translate(0, state.s6PhoneY);
+
+        ctx.font = "700 44px 'Plus Jakarta Sans'";
+        const phoneW = ctx.measureText(CONTACT).width + 88;
+        const phoneH = 82;
+        const phoneX = SAFE_CX - phoneW / 2;
+        const phoneY = 1300;
+
+        roundRectPath(ctx, phoneX, phoneY, phoneW, phoneH, 999);
+        ctx.fillStyle = "rgba(7, 18, 31, 0.28)";
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+        ctx.stroke();
+
+        ctx.fillStyle = "#FFFFFF";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(CONTACT, SAFE_CX, phoneY + phoneH / 2 + 2);
+        ctx.restore();
+      }
+    }
+
+    // =========================================================================
+    // INITIALIZATION, PREVIEW & EXPORT MP4
+    // =========================================================================
+    const canvas = document.getElementById("reelCanvas");
+    const ctx = canvas.getContext("2d");
+    const previewBtn = document.getElementById("previewBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const statusText = document.getElementById("statusText");
+    const errorBox = document.getElementById("errorBox");
+    const resultArea = document.getElementById("resultArea");
+    const downloadAgainLink = document.getElementById("downloadAgainLink");
+    const resultVideo = document.getElementById("resultVideo");
+
+    let previewAudioCtx = null;
+    let previewRafId = null;
+    let isExporting = false;
+
+    function showError(msg) {
+      errorBox.style.display = "block";
+      errorBox.textContent = msg;
+    }
+
+    function clearError() {
+      errorBox.style.display = "none";
+      errorBox.textContent = "";
+    }
+
+    function stopPreview() {
+      if (previewRafId) {
+        cancelAnimationFrame(previewRafId);
+        previewRafId = null;
+      }
+      if (previewAudioCtx) {
+        try { previewAudioCtx.close(); } catch (_) {}
+        previewAudioCtx = null;
+      }
+    }
+
+    async function loadFonts() {
+      await Promise.all([
+        document.fonts.load("500 40px 'Plus Jakarta Sans'"),
+        document.fonts.load("700 44px 'Plus Jakarta Sans'"),
+        document.fonts.load("800 92px 'Plus Jakarta Sans'")
+      ]);
+      await document.fonts.ready;
+    }
+
+    function startPreview() {
+      if (isExporting) return;
+      clearError();
+      stopPreview();
+
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      previewAudioCtx = new AudioCtx();
+      if (previewAudioCtx.state === "suspended") {
+        previewAudioCtx.resume();
+      }
+
+      const startTime = previewAudioCtx.currentTime + 0.05;
+      scheduleAllSfx(previewAudioCtx, startTime, previewAudioCtx.destination);
+      statusText.textContent = "Playing preview (0.0s / 22.0s)...";
+
+      function tick() {
+        if (!previewAudioCtx) return;
+        const elapsed = Math.max(0, previewAudioCtx.currentTime - startTime);
+        if (elapsed >= DURATION) {
+          tl.time(DURATION);
+          drawFrame(ctx);
+          statusText.textContent = "Preview complete (22.0s).";
+          stopPreview();
+          return;
+        }
+        tl.time(elapsed);
+        drawFrame(ctx);
+        statusText.textContent = `Playing preview (${elapsed.toFixed(1)}s / ${DURATION}.0s)...`;
+        previewRafId = requestAnimationFrame(tick);
+      }
+
+      previewRafId = requestAnimationFrame(tick);
+    }
+
+    async function fallbackMediaRecorderExport() {
+      statusText.textContent = "WebCodecs unavailable — recording real-time fallback (22s)...";
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const recAudioCtx = new AudioCtx();
+      if (recAudioCtx.state === "suspended") await recAudioCtx.resume();
+
+      const dest = recAudioCtx.createMediaStreamDestination();
+      const canvasStream = canvas.captureStream(FPS);
+      const combined = new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...dest.stream.getAudioTracks()
+      ]);
+
+      const mimeCandidates = [
+        "video/mp4;codecs=avc1,mp4a.40.2",
+        "video/mp4",
+        "video/webm;codecs=vp9,opus",
+        "video/webm"
+      ];
+      let chosenMime = "";
+      for (const m of mimeCandidates) {
+        if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) {
+          chosenMime = m;
+          break;
+        }
+      }
+
+      const recorder = new MediaRecorder(combined, chosenMime ? { mimeType: chosenMime, videoBitsPerSecond: 8_000_000 } : undefined);
+      const chunks = [];
+      recorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+
+      const donePromise = new Promise((resolve, reject) => {
+        recorder.onstop = () => resolve();
+        recorder.onerror = (e) => reject(e.error || new Error("MediaRecorder failed"));
+      });
+
+      const startTime = recAudioCtx.currentTime + 0.05;
+      scheduleAllSfx(recAudioCtx, startTime, dest);
+      scheduleAllSfx(recAudioCtx, startTime, recAudioCtx.destination);
+      recorder.start();
+
+      await new Promise((resolve) => {
+        function step() {
+          const elapsed = Math.max(0, recAudioCtx.currentTime - startTime);
+          if (elapsed >= DURATION) {
+            tl.time(DURATION);
+            drawFrame(ctx);
+            resolve();
+            return;
+          }
+          tl.time(elapsed);
+          drawFrame(ctx);
+          const pct = Math.min(99, Math.round((elapsed / DURATION) * 100));
+          statusText.textContent = `Fallback real-time recording ${pct}%...`;
+          requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      });
+
+      recorder.stop();
+      await donePromise;
+      try { await recAudioCtx.close(); } catch (_) {}
+
+      const isMp4 = chosenMime.includes("mp4");
+      const blob = new Blob(chunks, { type: chosenMime || "video/webm" });
+      finishDownload(blob, isMp4 ? "ezsites-homepage-5-seconds-reel.mp4" : "ezsites-homepage-5-seconds-reel.webm");
+      statusText.textContent = `Exported via real-time MediaRecorder fallback (${isMp4 ? "MP4" : "WebM"}).`;
+    }
+
+    function finishDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      downloadAgainLink.href = url;
+      downloadAgainLink.download = filename;
+      resultVideo.src = url;
+      resultArea.style.display = "flex";
+
+      const tempA = document.createElement("a");
+      tempA.href = url;
+      tempA.download = filename;
+      document.body.appendChild(tempA);
+      tempA.click();
+      tempA.remove();
+    }
+
+    async function exportMp4() {
+      if (isExporting) return;
+      isExporting = true;
+      stopPreview();
+      clearError();
+      previewBtn.disabled = true;
+      exportBtn.disabled = true;
+      resultArea.style.display = "none";
+
+      let wakeLock = null;
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLock = await navigator.wakeLock.request("screen");
+        }
+      } catch (_) {}
+
+      try {
+        await loadFonts();
+
+        if (typeof VideoEncoder === "undefined") {
+          await fallbackMediaRecorderExport();
+          return;
+        }
+
+        statusText.textContent = "Synthesizing audio track...";
+        const audioBuffer = await renderOfflineAudio();
+
+        const codecCandidates = ["avc1.64002A", "avc1.640028", "avc1.4D0028"];
+        let selectedVideoConfig = null;
+        for (const codec of codecCandidates) {
+          const cfg = {
+            codec,
+            width: WIDTH,
+            height: HEIGHT,
+            bitrate: 8_000_000,
+            framerate: FPS
+          };
+          const res = await VideoEncoder.isConfigSupported(cfg);
+          if (res.supported) {
+            selectedVideoConfig = cfg;
+            break;
+          }
+        }
+
+        if (!selectedVideoConfig) {
+          await fallbackMediaRecorderExport();
+          return;
+        }
+
+        let canEncodeAudio = false;
+        const audioConfig = {
+          codec: "mp4a.40.2",
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitrate: 128000
+        };
+        if (typeof AudioEncoder !== "undefined") {
+          try {
+            const aRes = await AudioEncoder.isConfigSupported(audioConfig);
+            canEncodeAudio = Boolean(aRes.supported);
+          } catch (_) {
+            canEncodeAudio = false;
+          }
+        }
+
+        const muxerOptions = {
+          target: new ArrayBufferTarget(),
+          video: {
+            codec: "avc",
+            width: WIDTH,
+            height: HEIGHT
+          },
+          fastStart: "in-memory"
+        };
+        if (canEncodeAudio) {
+          muxerOptions.audio = {
+            codec: "aac",
+            numberOfChannels: 2,
+            sampleRate: 44100
+          };
+        }
+        const muxer = new Muxer(muxerOptions);
+
+        let encoderFailure = null;
+        const videoEncoder = new VideoEncoder({
+          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+          error: (err) => { encoderFailure = err; }
+        });
+        videoEncoder.configure(selectedVideoConfig);
+
+        let audioEncoder = null;
+        if (canEncodeAudio) {
+          audioEncoder = new AudioEncoder({
+            output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+            error: (err) => { encoderFailure = err; }
+          });
+          audioEncoder.configure(audioConfig);
+
+          const ch0 = audioBuffer.getChannelData(0);
+          const ch1 = audioBuffer.getChannelData(1);
+          const totalSamples = audioBuffer.length;
+          const chunkSize = 1024;
+
+          for (let offset = 0; offset < totalSamples; offset += chunkSize) {
+            if (encoderFailure) throw encoderFailure;
+            const frames = Math.min(chunkSize, totalSamples - offset);
+            const planarData = new Float32Array(frames * 2);
+            planarData.set(ch0.subarray(offset, offset + frames), 0);
+            planarData.set(ch1.subarray(offset, offset + frames), frames);
+
+            const timestampUs = Math.round((offset / 44100) * 1_000_000);
+            const audioData = new AudioData({
+              format: "f32-planar",
+              sampleRate: 44100,
+              numberOfFrames: frames,
+              numberOfChannels: 2,
+              timestamp: timestampUs,
+              data: planarData
+            });
+            audioEncoder.encode(audioData);
+            audioData.close();
+          }
+          await audioEncoder.flush();
+        }
+
+        const totalFrames = DURATION * FPS;
+        const frameDurationUs = Math.round(1_000_000 / FPS);
+
+        for (let i = 0; i < totalFrames; i++) {
+          if (encoderFailure) throw encoderFailure;
+
+          const t = i / FPS;
+          tl.time(t);
+          drawFrame(ctx);
+
+          const timestampUs = Math.round((i * 1_000_000) / FPS);
+          const vf = new VideoFrame(canvas, {
+            timestamp: timestampUs,
+            duration: frameDurationUs
+          });
+
+          videoEncoder.encode(vf, { keyFrame: i % 30 === 0 });
+          vf.close();
+
+          while (videoEncoder.encodeQueueSize > 8) {
+            if (encoderFailure) throw encoderFailure;
+            await new Promise((r) => setTimeout(r, 4));
+          }
+
+          if (i % 10 === 0 || i === totalFrames - 1) {
+            const pct = Math.round(((i + 1) / totalFrames) * 100);
+            statusText.textContent = `Exporting ${pct}%`;
+            await new Promise((r) => setTimeout(r, 0));
+          }
+        }
+
+        await videoEncoder.flush();
+        videoEncoder.close();
+        if (audioEncoder) audioEncoder.close();
+        if (encoderFailure) throw encoderFailure;
+
+        muxer.finalize();
+        const { buffer } = muxer.target;
+        const blob = new Blob([buffer], { type: "video/mp4" });
+        finishDownload(blob, "ezsites-homepage-5-seconds-reel.mp4");
+
+        if (canEncodeAudio) {
+          statusText.textContent = "Export complete! Your 22s MP4 (video + SFX) has downloaded.";
+        } else {
+          statusText.textContent = "Export complete (video only — AudioEncoder AAC unsupported in this browser).";
+        }
+      } catch (err) {
+        console.error(err);
+        showError(`Export error: ${err && err.message ? err.message : String(err)}`);
+        statusText.textContent = "Export failed.";
+      } finally {
+        if (wakeLock) {
+          try { await wakeLock.release(); } catch (_) {}
+        }
+        isExporting = false;
+        previewBtn.disabled = false;
+        exportBtn.disabled = false;
+      }
+    }
+
+    (async () => {
+      try {
+        await loadFonts();
+        buildTimeline();
+        tl.time(1.5);
+        drawFrame(ctx);
+        statusText.textContent = "Ready — click ▶ Preview or ⬇ Export MP4.";
+      } catch (err) {
+        showError(`Initialization error: ${err.message}`);
+      }
+    })();
+
+    previewBtn.addEventListener("click", startPreview);
+    exportBtn.addEventListener("click", exportMp4);
+  </script>
+</body>
+</html>
