@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ezsites - 3 Mistakes Reel Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #050B12;
+      color: #F6FBFB;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+      gap: 14px;
+    }
+    .canvas-wrap {
+      height: 74vh;
+      aspect-ratio: 9 / 16;
+      background: #07121F;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    button {
+      background: #0FB5AE;
+      color: #07121F;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-weight: 800;
+      font-size: 15px;
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+    button:hover:not(:disabled) { transform: translateY(-1px); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    #exportBtn { background: #FF6B5E; color: #FFFFFF; }
+    #status {
+      font-size: 14px;
+      font-weight: 700;
+      color: #9EB3C2;
+      min-height: 20px;
+      text-align: center;
+    }
+    #errorBox {
+      color: #FF6B5E;
+      font-size: 14px;
+      font-weight: 700;
+      max-width: 560px;
+      text-align: center;
+      display: none;
+      background: rgba(255, 107, 94, 0.12);
+      border: 1px solid rgba(255, 107, 94, 0.4);
+      padding: 10px 16px;
+      border-radius: 8px;
+    }
+    #resultArea {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+      padding: 14px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 12px;
+    }
+    #resultArea a {
+      color: #0FB5AE;
+      font-weight: 800;
+      text-decoration: underline;
+      font-size: 15px;
+    }
+    #resultVideo {
+      width: 210px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="canvas-wrap">
+    <canvas id="reelCanvas" width="1080" height="1920"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="previewBtn">▶ Preview</button>
+    <button id="exportBtn">⬇ Export MP4</button>
+  </div>
+
+  <div id="status">Loading fonts...</div>
+  <div id="errorBox"></div>
+
+  <div id="resultArea">
+    <a id="downloadLink" href="#" download="ezsites-3-mistakes-reel.mp4">Download again (ezsites-3-mistakes-reel.mp4)</a>
+    <video id="resultVideo" controls playsinline></video>
+  </div>
+
+  <script type="module">
+    import { Muxer, ArrayBufferTarget } from "https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/+esm";
+
+    // FILL-INS
+    const BRAND = "ezsites";
+    const CONTACT = "+91 8102253186";
+    const CLINIC_DEMO = "Smile Care Dental Clinic";
+    const DURATION = 22;
+    const FPS = 30;
+    const WIDTH = 1080;
+    const HEIGHT = 1920;
+
+    // PALETTE
+    const COL = {
+      navy: "#07121F",
+      deepBlue: "#0B3C5D",
+      teal: "#0FB5AE",
+      softWhite: "#F6FBFB",
+      coral: "#FF6B5E",
+      white: "#FFFFFF"
+    };
+
+    // SOUND EFFECTS CUE LIST (synced exactly with timeline)
+    const SFX_CUES = [
+      // SCENE 1 (0 - 4s)
+      { t: 0.2, type: "whoosh" },
+      { t: 0.5, type: "tick" },
+      { t: 0.9, type: "pop" },
+      { t: 1.8, type: "slide" },
+      { t: 2.4, type: "empty-ping" },
+      // SCENE 2 (4 - 8s)
+      { t: 4.0, type: "whoosh" },
+      { t: 4.4, type: "tick" },
+      { t: 4.8, type: "pop" },
+      { t: 5.4, type: "slide" },
+      { t: 5.7, type: "slide" },
+      { t: 6.0, type: "slide" },
+      { t: 6.8, type: "empty-ping" },
+      // SCENE 3 (8 - 12s)
+      { t: 8.0, type: "whoosh" },
+      { t: 8.4, type: "tick" },
+      { t: 8.8, type: "pop" },
+      { t: 9.3, type: "tick" },
+      { t: 9.6, type: "tick" },
+      { t: 9.9, type: "tick" },
+      { t: 10.2, type: "tick" },
+      { t: 10.8, type: "empty-ping" },
+      { t: 11.3, type: "soft-thud" },
+      // SCENE 4 (12 - 16s)
+      { t: 12.0, type: "whoosh" },
+      { t: 12.4, type: "tick" },
+      { t: 12.8, type: "pop" },
+      { t: 13.3, type: "slide" },
+      { t: 13.6, type: "slide" },
+      { t: 13.9, type: "slide" },
+      { t: 14.6, type: "pop" },
+      { t: 15.2, type: "empty-ping" },
+      // SCENE 5 (16 - 22s)
+      { t: 16.0, type: "whoosh" },
+      { t: 16.8, type: "pop" },
+      { t: 18.4, type: "slide" },
+      { t: 19.6, type: "pop" },
+      { t: 20.2, type: "final-chime" }
+    ];
+
+    // WEB AUDIO SYNTHESIS (shared between Preview and Offline Export)
+    function createNoiseBuffer(ctx, durationSec) {
+      const len = Math.ceil(ctx.sampleRate * durationSec);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) {
+        // Deterministic pseudo-random noise so preview and export match
+        const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+        data[i] = (x - Math.floor(x)) * 2 - 1;
+      }
+      return buf;
+    }
+
+    function createMasterChain(ctx) {
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.setValueAtTime(-14, 0);
+      comp.knee.setValueAtTime(10, 0);
+      comp.ratio.setValueAtTime(8, 0);
+      comp.attack.setValueAtTime(0.003, 0);
+      comp.release.setValueAtTime(0.15, 0);
+
+      const master = ctx.createGain();
+      master.gain.setValueAtTime(0.25, 0);
+
+      master.connect(comp);
+      comp.connect(ctx.destination);
+      return master;
+    }
+
+    function scheduleCue(ctx, dest, type, t) {
+      const eps = 0.0001;
+      if (type === "whoosh") {
+        const dur = 0.35;
+        const src = ctx.createBufferSource();
+        src.buffer = createNoiseBuffer(ctx, dur);
+        const filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.Q.setValueAtTime(2.2, t);
+        filter.frequency.setValueAtTime(400, t);
+        filter.frequency.exponentialRampToValueAtTime(2500, t + dur);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(eps, t);
+        g.gain.linearRampToValueAtTime(0.45, t + 0.06);
+        g.gain.exponentialRampToValueAtTime(eps, t + dur);
+
+        src.connect(filter).connect(g).connect(dest);
+        src.start(t);
+        src.stop(t + dur);
+      } else if (type === "pop") {
+        const dur = 0.12;
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(700, t);
+        osc.frequency.exponentialRampToValueAtTime(250, t + dur);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(eps, t);
+        g.gain.linearRampToValueAtTime(0.55, t + 0.012);
+        g.gain.exponentialRampToValueAtTime(eps, t + dur);
+
+        osc.connect(g).connect(dest);
+        osc.start(t);
+        osc.stop(t + dur);
+      } else if (type === "tick") {
+        const dur = 0.05;
+        const osc = ctx.createOscillator();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(1200, t);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(eps, t);
+        g.gain.linearRampToValueAtTime(0.4, t + 0.005);
+        g.gain.exponentialRampToValueAtTime(eps, t + dur);
+
+        osc.connect(g).connect(dest);
+        osc.start(t);
+        osc.stop(t + dur);
+      } else if (type === "slide") {
+        const dur = 0.2;
+        const src = ctx.createBufferSource();
+        src.buffer = createNoiseBuffer(ctx, dur);
+        const filter = ctx.createBiquadFilter();
+        filter.type = "bandpass";
+        filter.Q.setValueAtTime(3.0, t);
+        filter.frequency.setValueAtTime(600, t);
+        filter.frequency.exponentialRampToValueAtTime(1600, t + dur);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(eps, t);
+        g.gain.linearRampToValueAtTime(0.24, t + 0.03);
+        g.gain.exponentialRampToValueAtTime(eps, t + dur);
+
+        src.connect(filter).connect(g).connect(dest);
+        src.start(t);
+        src.stop(t + dur);
+      } else if (type === "empty-ping") {
+        const notes = [
+          { f: 520, start: 0, dur: 0.16 },
+          { f: 390, start: 0.14, dur: 0.21 }
+        ];
+        for (const n of notes) {
+          const st = t + n.start;
+          const osc = ctx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(n.f, st);
+
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(eps, st);
+          g.gain.linearRampToValueAtTime(0.42, st + 0.012);
+          g.gain.exponentialRampToValueAtTime(eps, st + n.dur);
+
+          osc.connect(g).connect(dest);
+          osc.start(st);
+          osc.stop(st + n.dur);
+        }
+      } else if (type === "soft-thud") {
+        const dur = 0.25;
+        const osc = ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(110, t);
+        osc.frequency.exponentialRampToValueAtTime(60, t + dur);
+
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(eps, t);
+        g.gain.linearRampToValueAtTime(0.45, t + 0.015);
+        g.gain.exponentialRampToValueAtTime(eps, t + dur);
+
+        osc.connect(g).connect(dest);
+        osc.start(t);
+        osc.stop(t + dur);
+      } else if (type === "final-chime") {
+        const freqs = [660, 880, 1320];
+        freqs.forEach((f, idx) => {
+          const st = t + idx * 0.09;
+          const dur = 0.8;
+          const osc = ctx.createOscillator();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(f, st);
+
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(eps, st);
+          g.gain.linearRampToValueAtTime(0.32, st + 0.015);
+          g.gain.exponentialRampToValueAtTime(eps, st + dur);
+
+          osc.connect(g).connect(dest);
+          osc.start(st);
+          osc.stop(st + dur);
+        });
+      }
+    }
+
+    function scheduleAllCues(ctx, baseTime = 0, extraDest = null) {
+      const master = createMasterChain(ctx);
+      if (extraDest) {
+        master.connect(extraDest);
+      }
+      for (const cue of SFX_CUES) {
+        scheduleCue(ctx, master, cue.type, baseTime + cue.t);
+      }
+      return master;
+    }
+
+    // DETERMINISTIC ANIMATION STATE
+    const state = {
+      bgLightMix: 0,
+      bgFinalMix: 0,
+      s1: {
+        alpha: 0, chipAlpha: 0, chipScale: 0.8,
+        headY: 40, headAlpha: 0,
+        winScale: 0.9, winAlpha: 0,
+        arrowX: 0, arrowAlpha: 0
+      },
+      s2: {
+        alpha: 0, chipAlpha: 0, chipScale: 0.8,
+        headY: 40, headAlpha: 0,
+        phoneY: 60, phoneAlpha: 0,
+        b1Alpha: 0, b1X: -40,
+        b2Alpha: 0, b2X: -40,
+        b3Alpha: 0, b3X: -40,
+        magT: 0, magAlpha: 0,
+        circleAlpha: 0, circleScale: 1.35
+      },
+      s3: {
+        alpha: 0, chipAlpha: 0, chipScale: 0.8,
+        headY: 40, headAlpha: 0,
+        phoneY: 60, phoneAlpha: 0,
+        loadProgress: 0.14,
+        spinAngle: 0,
+        breakProgress: 0,
+        badgeScale: 0
+      },
+      s4: {
+        alpha: 0, chipAlpha: 0, chipScale: 0.8,
+        headY: 40, headAlpha: 0,
+        cardY: 50, cardAlpha: 0,
+        r1Alpha: 0, r1X: -50,
+        r2Alpha: 0, r2X: -50,
+        r3Alpha: 0, r3X: -50,
+        bubbleScale: 0, bubbleAlpha: 0
+      },
+      s5: {
+        alpha: 0,
+        headY: 40, headAlpha: 0,
+        logoScale: 0.8, logoAlpha: 0,
+        subAlpha: 0, subY: 25,
+        btnScale: 0.8, btnAlpha: 0,
+        btnPulse: 0,
+        contactAlpha: 0
+      }
+    };
+
+    // GSAP MASTER TIMELINE (exactly 22.0s)
+    const tl = gsap.timeline({ paused: true });
+
+    function buildTimeline() {
+      tl.clear();
+
+      // Anchor timeline duration to exactly 22s
+      tl.set(state, { bgLightMix: 0, bgFinalMix: 0 }, 0);
+
+      // SCENE 1 (0 - 4s)
+      tl.set(state.s1, { alpha: 1 }, 0);
+      tl.fromTo(state.s1, { headY: 40, headAlpha: 0 }, { headY: 0, headAlpha: 1, duration: 0.45, ease: "power3.out" }, 0.2);
+      tl.fromTo(state.s1, { chipAlpha: 0, chipScale: 0.8 }, { chipAlpha: 1, chipScale: 1, duration: 0.3, ease: "back.out(1.7)" }, 0.5);
+      tl.fromTo(state.s1, { winScale: 0.9, winAlpha: 0 }, { winScale: 1, winAlpha: 1, duration: 0.45, ease: "back.out(1.4)" }, 0.9);
+      tl.fromTo(state.s1, { arrowAlpha: 0, arrowX: 0 }, { arrowAlpha: 1, arrowX: 165, duration: 0.55, ease: "power2.out" }, 1.8);
+      tl.to(state.s1, { arrowAlpha: 0.3, duration: 0.4, ease: "power1.inOut" }, 2.4);
+      tl.to(state.s1, { alpha: 0, duration: 0.3, ease: "power2.in" }, 3.7);
+
+      // SCENE 2 (4 - 8s)
+      tl.set(state.s2, { alpha: 1 }, 4.0);
+      tl.fromTo(state.s2, { headY: 40, headAlpha: 0 }, { headY: 0, headAlpha: 1, duration: 0.45, ease: "power3.out" }, 4.0);
+      tl.fromTo(state.s2, { chipAlpha: 0, chipScale: 0.8 }, { chipAlpha: 1, chipScale: 1, duration: 0.3, ease: "back.out(1.7)" }, 4.4);
+      tl.fromTo(state.s2, { phoneY: 60, phoneAlpha: 0 }, { phoneY: 0, phoneAlpha: 1, duration: 0.45, ease: "power3.out" }, 4.8);
+      tl.fromTo(state.s2, { b1Alpha: 0, b1X: -40 }, { b1Alpha: 1, b1X: 0, duration: 0.25, ease: "power2.out" }, 5.4);
+      tl.fromTo(state.s2, { b2Alpha: 0, b2X: -40 }, { b2Alpha: 1, b2X: 0, duration: 0.25, ease: "power2.out" }, 5.7);
+      tl.fromTo(state.s2, { b3Alpha: 0, b3X: -40 }, { b3Alpha: 1, b3X: 0, duration: 0.25, ease: "power2.out" }, 6.0);
+      tl.fromTo(state.s2, { magAlpha: 0, magT: 0 }, { magAlpha: 1, magT: 1, duration: 1.4, ease: "power1.inOut" }, 5.3);
+      tl.fromTo(state.s2, { circleAlpha: 0, circleScale: 1.35 }, { circleAlpha: 1, circleScale: 1, duration: 0.35, ease: "back.out(1.7)" }, 6.8);
+      tl.to(state.s2, { alpha: 0, duration: 0.3, ease: "power2.in" }, 7.7);
+
+      // SCENE 3 (8 - 12s) - Transition background from Navy to Soft White
+      tl.to(state, { bgLightMix: 1, duration: 0.45, ease: "power2.inOut" }, 7.85);
+      tl.set(state.s3, { alpha: 1 }, 8.0);
+      tl.fromTo(state.s3, { headY: 40, headAlpha: 0 }, { headY: 0, headAlpha: 1, duration: 0.45, ease: "power3.out" }, 8.0);
+      tl.fromTo(state.s3, { chipAlpha: 0, chipScale: 0.8 }, { chipAlpha: 1, chipScale: 1, duration: 0.3, ease: "back.out(1.7)" }, 8.4);
+      tl.fromTo(state.s3, { phoneY: 60, phoneAlpha: 0 }, { phoneY: 0, phoneAlpha: 1, duration: 0.45, ease: "power3.out" }, 8.8);
+      tl.fromTo(state.s3, { spinAngle: 0 }, { spinAngle: Math.PI * 6, duration: 2.5, ease: "none" }, 8.8);
+      tl.to(state.s3, { loadProgress: 0.20, duration: 0.12, ease: "power2.out" }, 9.3);
+      tl.to(state.s3, { loadProgress: 0.25, duration: 0.12, ease: "power2.out" }, 9.6);
+      tl.to(state.s3, { loadProgress: 0.29, duration: 0.12, ease: "power2.out" }, 9.9);
+      tl.to(state.s3, { loadProgress: 0.32, duration: 0.12, ease: "power2.out" }, 10.2);
+      tl.fromTo(state.s3, { breakProgress: 0, badgeScale: 0 }, { breakProgress: 1, badgeScale: 1, duration: 0.35, ease: "back.out(1.6)" }, 11.3);
+      tl.to(state.s3, { alpha: 0, duration: 0.3, ease: "power2.in" }, 11.7);
+
+      // SCENE 4 (12 - 16s) - Light Soft White
+      tl.set(state.s4, { alpha: 1 }, 12.0);
+      tl.fromTo(state.s4, { headY: 40, headAlpha: 0 }, { headY: 0, headAlpha: 1, duration: 0.45, ease: "power3.out" }, 12.0);
+      tl.fromTo(state.s4, { chipAlpha: 0, chipScale: 0.8 }, { chipAlpha: 1, chipScale: 1, duration: 0.3, ease: "back.out(1.7)" }, 12.4);
+      tl.fromTo(state.s4, { cardY: 50, cardAlpha: 0 }, { cardY: 0, cardAlpha: 1, duration: 0.45, ease: "power3.out" }, 12.8);
+      tl.fromTo(state.s4, { r1Alpha: 0, r1X: -50 }, { r1Alpha: 1, r1X: 0, duration: 0.25, ease: "power2.out" }, 13.3);
+      tl.fromTo(state.s4, { r2Alpha: 0, r2X: -50 }, { r2Alpha: 1, r2X: 0, duration: 0.25, ease: "power2.out" }, 13.6);
+      tl.fromTo(state.s4, { r3Alpha: 0, r3X: -50 }, { r3Alpha: 1, r3X: 0, duration: 0.25, ease: "power2.out" }, 13.9);
+      tl.fromTo(state.s4, { bubbleScale: 0, bubbleAlpha: 0 }, { bubbleScale: 1, bubbleAlpha: 1, duration: 0.38, ease: "back.out(1.7)" }, 14.6);
+      tl.to(state.s4, { alpha: 0, duration: 0.3, ease: "power2.in" }, 15.7);
+
+      // SCENE 5 (16 - 22s) - Teal-to-Blue Gradient
+      tl.to(state, { bgFinalMix: 1, duration: 0.45, ease: "power2.inOut" }, 15.85);
+      tl.set(state.s5, { alpha: 1 }, 16.0);
+      tl.fromTo(state.s5, { headY: 40, headAlpha: 0 }, { headY: 0, headAlpha: 1, duration: 0.45, ease: "power3.out" }, 16.0);
+      tl.fromTo(state.s5, { logoScale: 0.8, logoAlpha: 0 }, { logoScale: 1, logoAlpha: 1, duration: 0.45, ease: "back.out(1.5)" }, 16.8);
+      tl.fromTo(state.s5, { subAlpha: 0, subY: 25 }, { subAlpha: 1, subY: 0, duration: 0.35, ease: "power2.out" }, 18.4);
+      tl.fromTo(state.s5, { btnScale: 0.8, btnAlpha: 0, contactAlpha: 0 }, { btnScale: 1, btnAlpha: 1, contactAlpha: 1, duration: 0.4, ease: "back.out(1.6)" }, 19.6);
+      tl.fromTo(state.s5, { btnPulse: 0 }, { btnPulse: Math.PI * 3, duration: 2.2, ease: "sine.inOut" }, 19.8);
+
+      // Hold until exactly DURATION
+      tl.set({}, {}, DURATION);
+    }
+
+    // DRAWING HELPERS
+    function lerpColor(hexA, hexB, t) {
+      const a = parseInt(hexA.slice(1), 16);
+      const b = parseInt(hexB.slice(1), 16);
+      const r1 = (a >> 16) & 255, g1 = (a >> 8) & 255, b1 = a & 255;
+      const r2 = (b >> 16) & 255, g2 = (b >> 8) & 255, b2 = b & 255;
+      const r = Math.round(r1 + (r2 - r1) * t);
+      const g = Math.round(g1 + (g2 - g1) * t);
+      const bl = Math.round(b1 + (b2 - b1) * t);
+      return `rgb(${r},${g},${bl})`;
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      const radius = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + w, y, x + w, y + h, radius);
+      ctx.arcTo(x + w, y + h, x, y + h, radius);
+      ctx.arcTo(x, y + h, x, y, radius);
+      ctx.arcTo(x, y, x + w, y, radius);
+      ctx.closePath();
+    }
+
+    /**
+     * Multi-line centered headline helper with exact phrase highlighting.
+     * Safe box center X = 510 (inside x: 80..940).
+     */
+    function drawHeadline(ctx, lines, highlightPhrase, centerX, startY, fontSize, baseColor, highlightColor) {
+      ctx.save();
+      ctx.font = `800 ${fontSize}px 'Plus Jakarta Sans', sans-serif`;
+      ctx.textBaseline = "top";
+      const lineHeight = fontSize * 1.15;
+      const hlWords = highlightPhrase ? highlightPhrase.toLowerCase().split(" ") : [];
+
+      lines.forEach((lineText, idx) => {
+        const words = lineText.split(" ");
+        const cleanWords = words.map(w => w.replace(/[^a-zA-Z0-9]/g, "").toLowerCase());
+        const isHighlighted = new Array(words.length).fill(false);
+
+        if (hlWords.length > 0) {
+          for (let i = 0; i <= cleanWords.length - hlWords.length; i++) {
+            let match = true;
+            for (let j = 0; j < hlWords.length; j++) {
+              if (cleanWords[i + j] !== hlWords[j]) { match = false; break; }
+            }
+            if (match) {
+              for (let j = 0; j < hlWords.length; j++) isHighlighted[i + j] = true;
+            }
+          }
+        }
+
+        const spaceW = ctx.measureText(" ").width;
+        const widths = words.map(w => ctx.measureText(w).width);
+        const totalW = widths.reduce((a, b) => a + b, 0) + spaceW * (words.length - 1);
+
+        let curX = centerX - totalW / 2;
+        const y = startY + idx * lineHeight;
+
+        words.forEach((w, wIdx) => {
+          ctx.fillStyle = isHighlighted[wIdx] ? highlightColor : baseColor;
+          ctx.fillText(w, curX, y);
+          curX += widths[wIdx] + spaceW;
+        });
+      });
+      ctx.restore();
+    }
+
+    function drawChip(ctx, text, centerX, y, bg, textColor, alpha, scale) {
+      if (alpha <= 0.001) return;
+      ctx.save();
+      ctx.globalAlpha *= alpha;
+      ctx.translate(centerX, y + 34);
+      ctx.scale(scale, scale);
+
+      ctx.font = "700 40px 'Plus Jakarta Sans', sans-serif";
+      const tw = ctx.measureText(text).width;
+      const pw = tw + 56;
+      const ph = 68;
+
+      roundRect(ctx, -pw / 2, -ph / 2, pw, ph, 34);
+      ctx.fillStyle = bg;
+      ctx.fill();
+
+      ctx.fillStyle = textColor;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, 0, 2);
+      ctx.restore();
+    }
+
+    function drawPhoneShell(ctx, cx, cy, w, h, clipContentFn) {
+      const x = cx - w / 2;
+      const y = cy - h / 2;
+
+      // Shadow + outer dark bezel
+      ctx.save();
+      ctx.shadowColor = "rgba(7, 18, 31, 0.25)";
+      ctx.shadowBlur = 40;
+      ctx.shadowOffsetY = 18;
+      roundRect(ctx, x, y, w, h, 60);
+      ctx.fillStyle = "#102133";
+      ctx.fill();
+      ctx.restore();
+
+      // Inner screen
+      const pad = 16;
+      const sx = x + pad, sy = y + pad, sw = w - pad * 2, sh = h - pad * 2;
+      roundRect(ctx, sx, sy, sw, sh, 46);
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fill();
+
+      if (clipContentFn) {
+        ctx.save();
+        roundRect(ctx, sx, sy, sw, sh, 46);
+        ctx.clip();
+        clipContentFn(sx, sy, sw, sh);
+        ctx.restore();
+      }
+
+      // Top notch
+      roundRect(ctx, cx - 70, y + 26, 140, 22, 11);
+      ctx.fillStyle = "#102133";
+      ctx.fill();
+    }
+
+    // MAIN DRAW FUNCTION (Pure function of `state`)
+    function drawFrame(ctx) {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      // 1. Background
+      const baseBg = lerpColor(COL.navy, COL.softWhite, state.bgLightMix);
+      ctx.fillStyle = baseBg;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      if (state.bgFinalMix > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.bgFinalMix;
+        const grad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+        grad.addColorStop(0, COL.teal);
+        grad.addColorStop(1, COL.deepBlue);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        ctx.restore();
+      }
+
+      const safeCX = 510; // Center inside safe box x: 80..940
+
+      // =====================================================
+      // SCENE 1: 0-4s DARK navy
+      // =====================================================
+      if (state.s1.alpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.s1.alpha;
+
+        drawChip(ctx, "3 mistakes", safeCX, 315, "rgba(15, 181, 174, 0.16)", COL.teal, state.s1.chipAlpha, state.s1.chipScale);
+
+        if (state.s1.headAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s1.headAlpha;
+          drawHeadline(
+            ctx,
+            ["Patients open", "your website,", "then leave"],
+            "leave",
+            safeCX,
+            420 + state.s1.headY,
+            92,
+            COL.softWhite,
+            COL.coral
+          );
+          ctx.restore();
+        }
+
+        // Visual: Large simple browser window in y=800..1450
+        if (state.s1.winAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s1.winAlpha;
+          const wCX = 470, wCY = 1130, wW = 680, wH = 470;
+          ctx.translate(wCX, wCY);
+          ctx.scale(state.s1.winScale, state.s1.winScale);
+
+          ctx.shadowColor = "rgba(0,0,0,0.45)";
+          ctx.shadowBlur = 35;
+          ctx.shadowOffsetY = 16;
+          roundRect(ctx, -wW / 2, -wH / 2, wW, wH, 28);
+          ctx.fillStyle = "#13263B";
+          ctx.fill();
+          ctx.shadowColor = "transparent";
+
+          // Browser header bar
+          roundRect(ctx, -wW / 2, -wH / 2, wW, 74, 28);
+          ctx.fillStyle = "#1B334D";
+          ctx.fill();
+          ctx.fillRect(-wW / 2, -wH / 2 + 46, wW, 28);
+
+          // 3 Dots
+          const dotColors = [COL.coral, "#F5B841", COL.teal];
+          dotColors.forEach((dc, idx) => {
+            ctx.beginPath();
+            ctx.arc(-wW / 2 + 44 + idx * 30, -wH / 2 + 37, 9, 0, Math.PI * 2);
+            ctx.fillStyle = dc;
+            ctx.fill();
+          });
+
+          // Simple content blocks inside browser
+          ctx.fillStyle = "#223E5C";
+          roundRect(ctx, -wW / 2 + 44, -wH / 2 + 115, 360, 44, 12);
+          ctx.fill();
+
+          ctx.fillStyle = "#1B344E";
+          roundRect(ctx, -wW / 2 + 44, -wH / 2 + 185, 592, 110, 16);
+          ctx.fill();
+
+          roundRect(ctx, -wW / 2 + 44, -wH / 2 + 320, 280, 96, 16);
+          ctx.fill();
+          roundRect(ctx, -wW / 2 + 356, -wH / 2 + 320, 280, 96, 16);
+          ctx.fill();
+
+          // Coral exit arrow sliding out to the right
+          if (state.s1.arrowAlpha > 0.001) {
+            ctx.save();
+            ctx.globalAlpha *= state.s1.arrowAlpha;
+            const ax = wW / 2 - 80 + state.s1.arrowX;
+            const ay = 20;
+            ctx.strokeStyle = COL.coral;
+            ctx.lineWidth = 18;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+
+            ctx.beginPath();
+            ctx.moveTo(ax - 95, ay);
+            ctx.lineTo(ax + 35, ay);
+            ctx.moveTo(ax - 5, ay - 40);
+            ctx.lineTo(ax + 35, ay);
+            ctx.lineTo(ax - 5, ay + 40);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+
+      // =====================================================
+      // SCENE 2: 4-8s DARK navy
+      // =====================================================
+      if (state.s2.alpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.s2.alpha;
+
+        drawChip(ctx, "Mistake 1", safeCX, 315, "rgba(255, 107, 94, 0.16)", COL.coral, state.s2.chipAlpha, state.s2.chipScale);
+
+        if (state.s2.headAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s2.headAlpha;
+          drawHeadline(
+            ctx,
+            ["Booking button", "is hard to find"],
+            "hard to find",
+            safeCX,
+            435 + state.s2.headY,
+            92,
+            COL.softWhite,
+            COL.coral
+          );
+          ctx.restore();
+        }
+
+        if (state.s2.phoneAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s2.phoneAlpha;
+          const pCX = safeCX, pCY = 1135 + state.s2.phoneY, pW = 380, pH = 620;
+
+          drawPhoneShell(ctx, pCX, pCY, pW, pH, (sx, sy, sw, sh) => {
+            // Cluttered grey blocks
+            const drawClutterGroup = (oy, alpha, ox) => {
+              if (alpha <= 0.001) return;
+              ctx.save();
+              ctx.globalAlpha *= alpha;
+              ctx.translate(ox, 0);
+              ctx.fillStyle = "#E1E9EE";
+              roundRect(ctx, sx + 24, sy + oy, sw - 48, 52, 10);
+              ctx.fill();
+              ctx.fillStyle = "#EDF2F5";
+              roundRect(ctx, sx + 24, sy + oy + 64, sw - 90, 22, 6);
+              ctx.fill();
+              roundRect(ctx, sx + 24, sy + oy + 94, sw - 130, 22, 6);
+              ctx.fill();
+              ctx.restore();
+            };
+
+            drawClutterGroup(65, state.s2.b1Alpha, state.s2.b1X);
+            drawClutterGroup(205, state.s2.b2Alpha, state.s2.b2X);
+            drawClutterGroup(345, state.s2.b3Alpha, state.s2.b3X);
+
+            // Tiny grey "Book" button hidden in bottom-right corner
+            const bx = sx + sw - 118;
+            const by = sy + sh - 68;
+            roundRect(ctx, bx, by, 96, 44, 10);
+            ctx.fillStyle = "#D4DEE5";
+            ctx.fill();
+            ctx.fillStyle = "#7D8E9B";
+            ctx.font = "700 36px 'Plus Jakarta Sans', sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("Book", bx + 48, by + 23);
+
+            // Magnifier wandering upper/middle screen, missing bottom-right
+            if (state.s2.magAlpha > 0.001) {
+              ctx.save();
+              ctx.globalAlpha *= state.s2.magAlpha;
+              const t = state.s2.magT;
+              const mx = sx + sw * 0.45 + Math.sin(t * Math.PI * 2) * 85;
+              const my = sy + 180 + t * 170;
+
+              ctx.strokeStyle = COL.deepBlue;
+              ctx.lineWidth = 10;
+              ctx.beginPath();
+              ctx.arc(mx, my, 36, 0, Math.PI * 2);
+              ctx.fillStyle = "rgba(15, 181, 174, 0.18)";
+              ctx.fill();
+              ctx.stroke();
+
+              ctx.beginPath();
+              ctx.lineCap = "round";
+              ctx.moveTo(mx + 26, my + 26);
+              ctx.lineTo(mx + 54, my + 54);
+              ctx.stroke();
+              ctx.restore();
+            }
+          });
+
+          // Dashed coral circle + "?" beside tiny button at 6.8s
+          if (state.s2.circleAlpha > 0.001) {
+            ctx.save();
+            ctx.globalAlpha *= state.s2.circleAlpha;
+            const targetX = pCX + pW / 2 - 86;
+            const targetY = pCY + pH / 2 - 62;
+            ctx.translate(targetX, targetY);
+            ctx.scale(state.s2.circleScale, state.s2.circleScale);
+
+            ctx.strokeStyle = COL.coral;
+            ctx.lineWidth = 7;
+            ctx.setLineDash([14, 10]);
+            ctx.beginPath();
+            ctx.arc(0, 0, 68, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = COL.coral;
+            ctx.font = "800 68px 'Plus Jakarta Sans', sans-serif";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText("?", 82, 0);
+            ctx.restore();
+          }
+
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+
+      // =====================================================
+      // SCENE 3: 8-12s LIGHT soft white
+      // =====================================================
+      if (state.s3.alpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.s3.alpha;
+
+        drawChip(ctx, "Mistake 2", safeCX, 315, "rgba(11, 60, 93, 0.1)", COL.deepBlue, state.s3.chipAlpha, state.s3.chipScale);
+
+        if (state.s3.headAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s3.headAlpha;
+          drawHeadline(
+            ctx,
+            ["Slow and not", "mobile friendly"],
+            "Slow",
+            safeCX,
+            435 + state.s3.headY,
+            92,
+            COL.deepBlue,
+            COL.coral
+          );
+          ctx.restore();
+        }
+
+        if (state.s3.phoneAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s3.phoneAlpha;
+          const pCX = safeCX, pCY = 1135 + state.s3.phoneY, pW = 380, pH = 620;
+
+          drawPhoneShell(ctx, pCX, pCY, pW, pH, (sx, sy, sw, sh) => {
+            // Spinner above loading bar
+            const spX = pCX, spY = pCY - 95;
+            ctx.save();
+            ctx.translate(spX, spY);
+            ctx.rotate(state.s3.spinAngle);
+            ctx.strokeStyle = "#E1E9EE";
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.arc(0, 0, 34, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.strokeStyle = COL.coral;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.arc(0, 0, 34, 0, Math.PI * 0.8);
+            ctx.stroke();
+            ctx.restore();
+
+            // Loading bar stuck near 30%
+            const barW = 260, barH = 26;
+            const barX = pCX - barW / 2, barY = pCY - 20;
+            roundRect(ctx, barX, barY, barW, barH, 13);
+            ctx.fillStyle = "#E6EEF2";
+            ctx.fill();
+
+            roundRect(ctx, barX, barY, barW * state.s3.loadProgress, barH, 13);
+            ctx.fillStyle = COL.coral;
+            ctx.fill();
+          });
+
+          // At 11.3s: two content blocks stick out beyond phone edge & tilt + coral cross badge
+          if (state.s3.breakProgress > 0.001) {
+            const bp = state.s3.breakProgress;
+            ctx.save();
+            ctx.translate(pCX + 70 * bp, pCY + 85);
+            ctx.rotate(0.08 * bp);
+            roundRect(ctx, -210, -45, 420, 82, 16);
+            ctx.fillStyle = "#DCE6EC";
+            ctx.fill();
+            ctx.strokeStyle = COL.deepBlue;
+            ctx.lineWidth = 4;
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.save();
+            ctx.translate(pCX - 65 * bp, pCY + 195);
+            ctx.rotate(-0.07 * bp);
+            roundRect(ctx, -210, -45, 420, 82, 16);
+            ctx.fillStyle = "#DCE6EC";
+            ctx.fill();
+            ctx.strokeStyle = COL.deepBlue;
+            ctx.lineWidth = 4;
+            ctx.stroke();
+            ctx.restore();
+
+            // Coral cross badge on phone top-right corner
+            ctx.save();
+            ctx.translate(pCX + pW / 2 - 10, pCY - pH / 2 + 40);
+            ctx.scale(state.s3.badgeScale, state.s3.badgeScale);
+            ctx.beginPath();
+            ctx.arc(0, 0, 44, 0, Math.PI * 2);
+            ctx.fillStyle = COL.coral;
+            ctx.fill();
+
+            ctx.strokeStyle = COL.white;
+            ctx.lineWidth = 9;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(-16, -16);
+            ctx.lineTo(16, 16);
+            ctx.moveTo(16, -16);
+            ctx.lineTo(-16, 16);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+
+      // =====================================================
+      // SCENE 4: 12-16s LIGHT soft white
+      // =====================================================
+      if (state.s4.alpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.s4.alpha;
+
+        drawChip(ctx, "Mistake 3", safeCX, 315, "rgba(11, 60, 93, 0.1)", COL.deepBlue, state.s4.chipAlpha, state.s4.chipScale);
+
+        if (state.s4.headAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s4.headAlpha;
+          drawHeadline(
+            ctx,
+            ["Treatments", "not listed", "anywhere"],
+            "not listed",
+            safeCX,
+            415 + state.s4.headY,
+            92,
+            COL.deepBlue,
+            COL.coral
+          );
+          ctx.restore();
+        }
+
+        // Visual: White website card "Our services" + 3 empty dashed rows + coral bubble
+        if (state.s4.cardAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s4.cardAlpha;
+          const cX = 110, cY = 840 + state.s4.cardY, cW = 680, cH = 510;
+
+          ctx.shadowColor = "rgba(11, 60, 93, 0.12)";
+          ctx.shadowBlur = 36;
+          ctx.shadowOffsetY = 14;
+          roundRect(ctx, cX, cY, cW, cH, 32);
+          ctx.fillStyle = COL.white;
+          ctx.fill();
+          ctx.shadowColor = "transparent";
+
+          // Title "Our services" (48px)
+          ctx.fillStyle = COL.deepBlue;
+          ctx.font = "800 48px 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "top";
+          ctx.fillText("Our services", cX + 48, cY + 42);
+
+          // Three empty dashed rows
+          const drawEmptyRow = (ry, rAlpha, rX) => {
+            if (rAlpha <= 0.001) return;
+            ctx.save();
+            ctx.globalAlpha *= rAlpha;
+            ctx.translate(rX, 0);
+            roundRect(ctx, cX + 48, ry, cW - 96, 86, 18);
+            ctx.strokeStyle = "#B8C9D4";
+            ctx.lineWidth = 4;
+            ctx.setLineDash([14, 10]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+          };
+
+          drawEmptyRow(cY + 130, state.s4.r1Alpha, state.s4.r1X);
+          drawEmptyRow(cY + 242, state.s4.r2Alpha, state.s4.r2X);
+          drawEmptyRow(cY + 354, state.s4.r3Alpha, state.s4.r3X);
+
+          // Coral speech bubble "Braces? Implants?" (40px)
+          if (state.s4.bubbleAlpha > 0.001) {
+            ctx.save();
+            ctx.globalAlpha *= state.s4.bubbleAlpha;
+            const bCX = 690, bCY = 1365;
+            ctx.translate(bCX, bCY);
+            ctx.scale(state.s4.bubbleScale, state.s4.bubbleScale);
+
+            const bW = 430, bH = 96;
+            roundRect(ctx, -bW / 2, -bH / 2, bW, bH, 28);
+            ctx.fillStyle = COL.coral;
+            ctx.fill();
+
+            // Speech bubble tail on top-left
+            ctx.beginPath();
+            ctx.moveTo(-110, -bH / 2 + 2);
+            ctx.lineTo(-80, -bH / 2 - 26);
+            ctx.lineTo(-55, -bH / 2 + 2);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = COL.white;
+            ctx.font = "800 40px 'Plus Jakarta Sans', sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("Braces? Implants?", 0, 2);
+            ctx.restore();
+          }
+
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+
+      // =====================================================
+      // SCENE 5: 16-22s TEAL-to-BLUE gradient
+      // =====================================================
+      if (state.s5.alpha > 0.001) {
+        ctx.save();
+        ctx.globalAlpha = state.s5.alpha;
+
+        // Headline (max 2 lines, white, no highlight) at y=400-760
+        if (state.s5.headAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s5.headAlpha;
+          drawHeadline(
+            ctx,
+            ["Fix these 3 and", "patients stay longer"],
+            "",
+            safeCX,
+            430 + state.s5.headY,
+            88,
+            COL.white,
+            COL.white
+          );
+          ctx.restore();
+        }
+
+        // Tooth logo + BRAND wordmark ("ezsites", large, white)
+        if (state.s5.logoAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s5.logoAlpha;
+          ctx.translate(safeCX, 875);
+          ctx.scale(state.s5.logoScale, state.s5.logoScale);
+
+          // Clean minimalistic tooth icon + wordmark centered together
+          ctx.font = "800 108px 'Plus Jakarta Sans', sans-serif";
+          const wordW = ctx.measureText(BRAND).width;
+          const iconW = 92;
+          const gap = 28;
+          const totalW = iconW + gap + wordW;
+          const startX = -totalW / 2;
+
+          // Tooth icon rounded badge
+          const tx = startX + iconW / 2;
+          const ty = 0;
+          ctx.save();
+          ctx.translate(tx, ty);
+          ctx.fillStyle = COL.white;
+          ctx.beginPath();
+          ctx.moveTo(0, -34);
+          ctx.bezierCurveTo(22, -46, 44, -30, 42, -4);
+          ctx.bezierCurveTo(40, 16, 30, 42, 18, 44);
+          ctx.bezierCurveTo(10, 44, 8, 20, 0, 20);
+          ctx.bezierCurveTo(-8, 20, -10, 44, -18, 44);
+          ctx.bezierCurveTo(-30, 42, -40, 16, -42, -4);
+          ctx.bezierCurveTo(-44, -30, -22, -46, 0, -34);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+
+          // BRAND wordmark
+          ctx.fillStyle = COL.white;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(BRAND, startX + iconW + gap, 4);
+          ctx.restore();
+        }
+
+        // Small line "Need a clinic website?" (48px, white, 80% opacity)
+        if (state.s5.subAlpha > 0.001) {
+          ctx.save();
+          ctx.globalAlpha *= state.s5.subAlpha * 0.8;
+          ctx.fillStyle = COL.white;
+          ctx.font = "700 48px 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("Need a clinic website?", safeCX, 1055 + state.s5.subY);
+          ctx.restore();
+        }
+
+        // White pulsing button "Message us on WhatsApp" + CONTACT pill below
+        if (state.s5.btnAlpha > 0.001) {
+          const pulse = 1 + Math.sin(state.s5.btnPulse) * 0.035;
+          ctx.save();
+          ctx.globalAlpha *= state.s5.btnAlpha;
+          ctx.translate(safeCX, 1210);
+          ctx.scale(state.s5.btnScale * pulse, state.s5.btnScale * pulse);
+
+          const btnW = 720, btnH = 114;
+          ctx.shadowColor = "rgba(7, 18, 31, 0.28)";
+          ctx.shadowBlur = 30;
+          ctx.shadowOffsetY = 12;
+          roundRect(ctx, -btnW / 2, -btnH / 2, btnW, btnH, 57);
+          ctx.fillStyle = COL.white;
+          ctx.fill();
+          ctx.shadowColor = "transparent";
+
+          ctx.fillStyle = COL.deepBlue;
+          ctx.font = "800 46px 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("Message us on WhatsApp", 0, 2);
+          ctx.restore();
+
+          // Pill showing CONTACT inside safe zone (y <= 1470)
+          ctx.save();
+          ctx.globalAlpha *= state.s5.contactAlpha;
+          const pillW = 460, pillH = 78, pillY = 1365;
+          roundRect(ctx, safeCX - pillW / 2, pillY - pillH / 2, pillW, pillH, 39);
+          ctx.fillStyle = "rgba(7, 18, 31, 0.28)";
+          ctx.fill();
+
+          ctx.fillStyle = COL.white;
+          ctx.font = "700 42px 'Plus Jakarta Sans', sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(CONTACT, safeCX, pillY + 2);
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    // INITIALIZATION & FONT LOADING
+    const canvas = document.getElementById("reelCanvas");
+    const ctx = canvas.getContext("2d");
+    const previewBtn = document.getElementById("previewBtn");
+    const exportBtn = document.getElementById("exportBtn");
+    const statusEl = document.getElementById("status");
+    const errorBox = document.getElementById("errorBox");
+    const resultArea = document.getElementById("resultArea");
+    const downloadLink = document.getElementById("downloadLink");
+    const resultVideo = document.getElementById("resultVideo");
+
+    function showError(msg) {
+      errorBox.style.display = "block";
+      errorBox.textContent = msg;
+    }
+
+    function clearError() {
+      errorBox.style.display = "none";
+      errorBox.textContent = "";
+    }
+
+    async function ensureFontsReady() {
+      await Promise.all([
+        document.fonts.load("500 48px 'Plus Jakarta Sans'"),
+        document.fonts.load("700 48px 'Plus Jakarta Sans'"),
+        document.fonts.load("800 92px 'Plus Jakarta Sans'")
+      ]);
+      await document.fonts.ready;
+    }
+
+    let previewAudioCtx = null;
+    let previewRafId = null;
+
+    function stopPreview() {
+      if (previewRafId) {
+        cancelAnimationFrame(previewRafId);
+        previewRafId = null;
+      }
+      if (previewAudioCtx) {
+        previewAudioCtx.close().catch(() => {});
+        previewAudioCtx = null;
+      }
+    }
+
+    async function startPreview() {
+      clearError();
+      stopPreview();
+      await ensureFontsReady();
+
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      previewAudioCtx = new AudioCtx();
+      if (previewAudioCtx.state === "suspended") {
+        await previewAudioCtx.resume();
+      }
+
+      const startTime = previewAudioCtx.currentTime + 0.05;
+      scheduleAllCues(previewAudioCtx, startTime);
+
+      statusEl.textContent = "Previewing...";
+
+      const tick = () => {
+        if (!previewAudioCtx) return;
+        const elapsed = Math.max(0, previewAudioCtx.currentTime - startTime);
+        if (elapsed >= DURATION) {
+          tl.time(DURATION);
+          drawFrame(ctx);
+          statusEl.textContent = "Preview complete (22.0s)";
+          stopPreview();
+          return;
+        }
+        tl.time(elapsed);
+        drawFrame(ctx);
+        statusEl.textContent = `Previewing ${elapsed.toFixed(1)}s / ${DURATION}s`;
+        previewRafId = requestAnimationFrame(tick);
+      };
+
+      previewRafId = requestAnimationFrame(tick);
+    }
+
+    // FALLBACK REALTIME RECORDER (if WebCodecs VideoEncoder is unavailable)
+    async function exportFallbackMediaRecorder() {
+      statusEl.textContent = "WebCodecs unavailable — using real-time MediaRecorder fallback...";
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const recAudioCtx = new AudioCtx();
+      if (recAudioCtx.state === "suspended") await recAudioCtx.resume();
+
+      const destNode = recAudioCtx.createMediaStreamDestination();
+      const startTime = recAudioCtx.currentTime + 0.05;
+      scheduleAllCues(recAudioCtx, startTime, destNode);
+
+      const canvasStream = canvas.captureStream(FPS);
+      const combined = new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...destNode.stream.getAudioTracks()
+      ]);
+
+      const mime = MediaRecorder.isTypeSupported("video/mp4")
+        ? "video/mp4"
+        : "video/webm";
+      const recorder = new MediaRecorder(combined, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+      const chunks = [];
+      recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+
+      return new Promise((resolve, reject) => {
+        recorder.onerror = e => reject(e.error || new Error("MediaRecorder error"));
+        recorder.onstop = () => {
+          recAudioCtx.close().catch(() => {});
+          const blob = new Blob(chunks, { type: mime });
+          resolve({ blob, note: "Exported with MediaRecorder real-time fallback." });
+        };
+        recorder.start();
+
+        const step = () => {
+          const elapsed = Math.max(0, recAudioCtx.currentTime - startTime);
+          if (elapsed >= DURATION) {
+            tl.time(DURATION);
+            drawFrame(ctx);
+            recorder.stop();
+            return;
+          }
+          tl.time(elapsed);
+          drawFrame(ctx);
+          const pct = Math.min(99, Math.round((elapsed / DURATION) * 100));
+          statusEl.textContent = `Exporting (real-time fallback) ${pct}%`;
+          requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+    }
+
+    // MAIN WEBCODECS OFFLINE EXPORT
+    async function exportMP4() {
+      clearError();
+      stopPreview();
+      previewBtn.disabled = true;
+      exportBtn.disabled = true;
+      resultArea.style.display = "none";
+
+      let wakeLock = null;
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLock = await navigator.wakeLock.request("screen").catch(() => null);
+        }
+
+        await ensureFontsReady();
+
+        if (typeof VideoEncoder === "undefined") {
+          const { blob, note } = await exportFallbackMediaRecorder();
+          finishDownload(blob, note);
+          return;
+        }
+
+        statusEl.textContent = "Rendering offline audio...";
+
+        // 1) Render SFX with OfflineAudioContext (stereo, 44100 Hz, DURATION seconds)
+        const sampleRate = 44100;
+        const totalSamples = sampleRate * DURATION;
+        const offlineCtx = new OfflineAudioContext(2, totalSamples, sampleRate);
+        scheduleAllCues(offlineCtx, 0);
+        const audioBuffer = await offlineCtx.startRendering();
+
+        // 2) Check VideoEncoder codec support
+        const candidateCodecs = ["avc1.64002A", "avc1.640028", "avc1.4D0028"];
+        let selectedVideoConfig = null;
+        for (const c of candidateCodecs) {
+          const cfg = {
+            codec: c,
+            width: WIDTH,
+            height: HEIGHT,
+            framerate: FPS,
+            bitrate: 8_000_000
+          };
+          const res = await VideoEncoder.isConfigSupported(cfg);
+          if (res.supported) {
+            selectedVideoConfig = cfg;
+            break;
+          }
+        }
+        if (!selectedVideoConfig) {
+          throw new Error("No supported H.264 VideoEncoder configuration found in this browser.");
+        }
+
+        // 3) Check AudioEncoder support
+        let hasAudioEncoder = false;
+        const audioConfig = {
+          codec: "mp4a.40.2",
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitrate: 128000
+        };
+        if (typeof AudioEncoder !== "undefined") {
+          try {
+            const aRes = await AudioEncoder.isConfigSupported(audioConfig);
+            hasAudioEncoder = Boolean(aRes && aRes.supported);
+          } catch {
+            hasAudioEncoder = false;
+          }
+        }
+
+        // 4) Configure mp4-muxer
+        const muxerOpts = {
+          target: new ArrayBufferTarget(),
+          video: {
+            codec: "avc",
+            width: WIDTH,
+            height: HEIGHT
+          },
+          fastStart: "in-memory"
+        };
+        if (hasAudioEncoder) {
+          muxerOpts.audio = {
+            codec: "aac",
+            numberOfChannels: 2,
+            sampleRate: 44100
+          };
+        }
+        const muxer = new Muxer(muxerOpts);
+
+        let encoderError = null;
+        const videoEncoder = new VideoEncoder({
+          output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+          error: err => { encoderError = err; }
+        });
+        videoEncoder.configure(selectedVideoConfig);
+
+        let audioEncoder = null;
+        if (hasAudioEncoder) {
+          audioEncoder = new AudioEncoder({
+            output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+            error: err => { encoderError = err; }
+          });
+          audioEncoder.configure(audioConfig);
+
+          // Feed AudioData in chunks of 1024 frames (f32-planar)
+          const ch0 = audioBuffer.getChannelData(0);
+          const ch1 = audioBuffer.getChannelData(1);
+          const chunkFrames = 1024;
+          for (let offset = 0; offset < totalSamples; offset += chunkFrames) {
+            if (encoderError) throw encoderError;
+            const frameCount = Math.min(chunkFrames, totalSamples - offset);
+            const planar = new Float32Array(frameCount * 2);
+            planar.set(ch0.subarray(offset, offset + frameCount), 0);
+            planar.set(ch1.subarray(offset, offset + frameCount), frameCount);
+
+            const timestampUs = Math.round((offset / sampleRate) * 1e6);
+            const audioData = new AudioData({
+              format: "f32-planar",
+              sampleRate,
+              numberOfFrames: frameCount,
+              numberOfChannels: 2,
+              timestamp: timestampUs,
+              data: planar
+            });
+            audioEncoder.encode(audioData);
+            audioData.close();
+          }
+        }
+
+        // 5) Encode Video Frames 0 .. DURATION*FPS - 1
+        const totalFrames = DURATION * FPS;
+        const frameDurationUs = Math.round(1e6 / FPS);
+
+        for (let i = 0; i < totalFrames; i++) {
+          if (encoderError) throw encoderError;
+
+          tl.time(i / FPS);
+          drawFrame(ctx);
+
+          const timestampUs = Math.round((i * 1e6) / FPS);
+          const vf = new VideoFrame(canvas, {
+            timestamp: timestampUs,
+            duration: frameDurationUs
+          });
+          videoEncoder.encode(vf, { keyFrame: i % 30 === 0 });
+          vf.close();
+
+          // Respect encoder backpressure
+          while (videoEncoder.encodeQueueSize > 8) {
+            if (encoderError) throw encoderError;
+            await new Promise(r => setTimeout(r, 4));
+          }
+
+          if (i % 10 === 0 || i === totalFrames - 1) {
+            const pct = Math.round(((i + 1) / totalFrames) * 100);
+            statusEl.textContent = `Exporting ${pct}%`;
+            await new Promise(r => setTimeout(r, 0));
+          }
+        }
+
+        // 6) Flush & Finalize
+        await videoEncoder.flush();
+        videoEncoder.close();
+
+        if (audioEncoder) {
+          await audioEncoder.flush();
+          audioEncoder.close();
+        }
+        if (encoderError) throw encoderError;
+
+        muxer.finalize();
+        const { buffer } = muxer.target;
+        const blob = new Blob([buffer], { type: "video/mp4" });
+
+        const note = hasAudioEncoder
+          ? "Export complete! MP4 downloaded with audio."
+          : "Export complete (video only — AudioEncoder AAC unsupported in this browser).";
+        finishDownload(blob, note);
+      } catch (err) {
+        console.error(err);
+        showError(`Export failed: ${err && err.message ? err.message : String(err)}`);
+        statusEl.textContent = "Export encountered an error.";
+      } finally {
+        if (wakeLock) {
+          wakeLock.release().catch(() => {});
+        }
+        previewBtn.disabled = false;
+        exportBtn.disabled = false;
+      }
+    }
+
+    function finishDownload(blob, statusMessage) {
+      const url = URL.createObjectURL(blob);
+      downloadLink.href = url;
+      resultVideo.src = url;
+      resultArea.style.display = "flex";
+      statusEl.textContent = statusMessage;
+
+      const tempA = document.createElement("a");
+      tempA.href = url;
+      tempA.download = "ezsites-3-mistakes-reel.mp4";
+      document.body.appendChild(tempA);
+      tempA.click();
+      tempA.remove();
+    }
+
+    // BOOTSTRAP
+    (async () => {
+      try {
+        buildTimeline();
+        await ensureFontsReady();
+        tl.time(1.2); // Show Scene 1 ready state on initial load
+        drawFrame(ctx);
+        statusEl.textContent = "Ready — Click ▶ Preview or ⬇ Export MP4";
+      } catch (err) {
+        showError(`Initialization error: ${err.message}`);
+      }
+    })();
+
+    previewBtn.addEventListener("click", startPreview);
+    exportBtn.addEventListener("click", exportMP4);
+  </script>
+</body>
+</html>
